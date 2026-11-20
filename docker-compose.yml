@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-romaneia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-romaneia_dev}
+      POSTGRES_DB: romaneia
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-romaneia} -d romaneia"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      MIGRATION_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-romaneia}:${POSTGRES_PASSWORD:-romaneia_dev}@db:5432/romaneia
+      DATABASE_URL: postgresql+psycopg://romaneia_app:${APP_DB_PASSWORD:-app_dev}@db:5432/romaneia
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app_dev}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-troque-este-segredo-em-qualquer-ambiente-real}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      RUN_SEED: ${RUN_SEED:-true}
+      SEED_PASSWORD: ${SEED_PASSWORD:-demo1234}
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  frontend:
+    build: ./frontend
+    ports: ["8080:80"]
+    depends_on:
+      backend: {condition: service_healthy}
+
+volumes:
+  pgdata:
