@@ -10,7 +10,7 @@ from sqlalchemy.engine import make_url
 
 ADMIN = make_url(os.environ.get("TEST_PG_ADMIN_URL", "postgresql+psycopg://romaneia:romaneia_dev@localhost:5432/postgres"))
 DB = "romaneia_test"
-APP_PW = "app_test_pw"
+APP_PW = os.environ.get("APP_DB_PASSWORD", "app_dev")  # mesmo papel do compose: tem de ser a mesma senha
 os.environ["MIGRATION_DATABASE_URL"] = ADMIN.set(database=DB).render_as_string(hide_password=False)
 os.environ["APP_DB_PASSWORD"] = APP_PW
 os.environ["DATABASE_URL"] = ADMIN.set(database=DB, username="romaneia_app", password=APP_PW).render_as_string(
@@ -47,7 +47,7 @@ def owner():
 def limpar(owner):
     yield
     with owner.begin() as c:
-        c.execute(text("truncate empresas, usuarios, clientes, produtos, produto_apelidos, rotas, pedidos, "
+        c.execute(text("truncate empresas, usuarios, tipos_comercio, clientes, produtos, produto_apelidos, rotas, pedidos, "
                        "pedido_itens, romaneios, romaneio_pedidos, romaneio_itens, romaneio_item_origens, "
                        "auditoria cascade"))
 

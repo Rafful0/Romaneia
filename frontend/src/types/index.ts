@@ -11,8 +11,16 @@ export interface UsuarioResumo { id: string; nome: string; papel: Papel; ativo: 
 export interface Cliente {
   id: string; nome: string; documento: string | null; telefone: string | null; endereco: string | null
   ativo: boolean; criado_em: string; atualizado_em: string
+  tipo_comercio_id: string | null; tipo_comercio_nome: string | null
 }
-export type ClienteIn = Pick<Cliente, 'nome' | 'documento' | 'telefone' | 'endereco'>
+export type ClienteIn = Pick<Cliente, 'nome' | 'documento' | 'telefone' | 'endereco' | 'tipo_comercio_id'>
+
+export interface TipoComercio { id: string; nome: string; ativo: boolean; criado_em: string; total_clientes: number }
+export interface LeituraTipo {
+  tipo: TipoComercio; dias: number; total_pedidos: number
+  itens: { produto_id: string; produto_codigo: string; produto_nome: string; produto_ativo: boolean; unidade: Unidade
+    pedidos: number; clientes: number; quantidade_total: string }[]
+}
 
 export interface Produto {
   id: string; codigo: string; nome: string; unidade: Unidade; ativo: boolean; apelidos: string[]
@@ -25,7 +33,7 @@ export interface ItemPedido {
   produto_nome: string | null; texto_original: string | null; quantidade: string; unidade: Unidade
 }
 export interface PedidoResumo {
-  id: string; numero: number; cliente_id: string; cliente_nome: string; rota_id: string | null
+  id: string; numero: number; cliente_id: string; cliente_nome: string; cliente_telefone: string | null; rota_id: string | null
   rota_nome: string | null; rota_data: string | null; data_entrega: string; status: StatusPedido
   observacao: string | null; motivo_cancelamento: string | null; revisao: number; criado_em: string
   atualizado_em: string; criado_por_nome: string; qtd_itens: number; nao_identificados: number

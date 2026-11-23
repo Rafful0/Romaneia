@@ -15,6 +15,8 @@ import { RomaneiosPage } from './pages/RomaneiosPage'
 import { RotaDetalhePage } from './pages/RotaDetalhePage'
 import { RotasPage } from './pages/RotasPage'
 import { SeparacaoPage } from './pages/SeparacaoPage'
+import { TipoComercioLeituraPage } from './pages/TipoComercioLeituraPage'
+import { TiposComercioPage } from './pages/TiposComercioPage'
 
 function Privado() {
   const { usuario, carregando, naoAutenticado, erro, refetch } = useAuth()
@@ -32,6 +34,8 @@ export function App() {
       <Route element={<Privado />}>
         <Route index element={<DashboardPage />} />
         <Route path="clientes" element={<ClientesPage />} />
+        <Route path="tipos-comercio" element={<TiposComercioPage />} />
+        <Route path="tipos-comercio/:id" element={<TipoComercioLeituraPage />} />
         <Route path="produtos" element={<ProdutosPage />} />
         <Route path="pedidos" element={<PedidosPage />} />
         <Route path="pedidos/novo" element={<PedidoFormPage />} />

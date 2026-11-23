@@ -94,12 +94,12 @@ export function RotaDetalhePage() {
               </Table>
             )}
 
-            <h2 className="mb-3 mt-8 text-sm font-semibold text-muted">Romaneios desta rota</h2>
+            <h2 className="mb-2 mt-8 text-sm font-semibold text-ink-2">Romaneios desta rota</h2>
             {r.romaneios.length === 0 ? <EmptyState titulo="Nenhum romaneio gerado ainda." /> : (
               <Table head={['Versão', 'Status', 'Gerado em', '']}>
                 {r.romaneios.map((ro) => (
                   <tr key={ro.id}>
-                    <Td>v{ro.versao}</Td>
+                    <Td className="font-mono text-xs text-ink-2">v{ro.versao}</Td>
                     <Td><StatusRomaneioBadge s={ro.status} /></Td>
                     <Td>{dataHora(ro.gerado_em)}</Td>
                     <Td className="text-right"><Link to={`/romaneios/${ro.id}`} className="text-brand hover:underline">Abrir</Link></Td>

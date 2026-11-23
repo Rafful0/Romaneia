@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { Badge, Button, EmptyState, Field, Input, Modal, PageHeader, Pagination, QueryState, Table, Td } from '../components/ui'
+import { Badge, Button, EmptyState, Field, Input, Modal, PageHeader, Pagination, QueryState, Select, Table, Td } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
@@ -12,7 +12,10 @@ import { api } from '../services/api'
 import type { Cliente, ClienteIn } from '../types'
 
 const opc = z.string().trim().max(500).transform((v) => v || null)
-const schema = z.object({ nome: z.string().trim().min(1, 'Informe o nome').max(200), documento: opc, telefone: opc, endereco: opc })
+const schema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome').max(200), documento: opc, telefone: opc, endereco: opc,
+  tipo_comercio_id: z.string().transform((v) => v || null),
+})
 type FormIn = z.input<typeof schema>
 
 function ClienteForm({ inicial, onSalvo, onCancel }: { inicial?: Cliente; onSalvo: () => void; onCancel: () => void }) {
@@ -20,8 +23,14 @@ function ClienteForm({ inicial, onSalvo, onCancel }: { inicial?: Cliente; onSalv
   const toast = useToast()
   const f = useForm<FormIn, unknown, ClienteIn>({
     resolver: zodResolver(schema),
-    defaultValues: { nome: inicial?.nome ?? '', documento: inicial?.documento ?? '', telefone: inicial?.telefone ?? '', endereco: inicial?.endereco ?? '' },
+    defaultValues: {
+      nome: inicial?.nome ?? '', documento: inicial?.documento ?? '', telefone: inicial?.telefone ?? '', endereco: inicial?.endereco ?? '',
+      tipo_comercio_id: inicial?.tipo_comercio_id ?? '',
+    },
   })
+  // shortcut: até 100 tipos ativos no <select>; suficiente para classificação de clientes.
+  const tipos = useQuery({ queryKey: ['tipos-comercio', 'ativos'], queryFn: () => api.tiposComercio.listar({ ativo: true, page_size: 100 }) })
+  const tipoAtualInativo = inicial?.tipo_comercio_id && tipos.data && !tipos.data.items.some((t) => t.id === inicial.tipo_comercio_id)
   const m = useMutation({
     mutationFn: (d: ClienteIn) => (inicial ? api.clientes.editar(inicial.id, d) : api.clientes.criar(d)),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['clientes'] }); toast.ok(inicial ? 'Cliente atualizado' : 'Cliente criado'); onSalvo() },
@@ -31,6 +40,15 @@ function ClienteForm({ inicial, onSalvo, onCancel }: { inicial?: Cliente; onSalv
   return (
     <form onSubmit={f.handleSubmit((d) => m.mutate(d))} className="flex flex-col gap-3">
       <Field label="Nome *" erro={e.nome?.message}>{(id) => <Input id={id} aria-invalid={!!e.nome} {...f.register('nome')} />}</Field>
+      <Field label="Tipo de comércio" erro={tipos.isError ? 'Não foi possível carregar os tipos' : undefined}>
+        {(id) => (
+          <Select id={id} disabled={tipos.isPending} {...f.register('tipo_comercio_id')}>
+            <option value="">Sem tipo</option>
+            {tipoAtualInativo && <option value={inicial!.tipo_comercio_id!}>{inicial!.tipo_comercio_nome} (inativo)</option>}
+            {tipos.data?.items.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </Select>
+        )}
+      </Field>
       <Field label="CPF/CNPJ">{(id) => <Input id={id} {...f.register('documento')} />}</Field>
       <Field label="Telefone">{(id) => <Input id={id} {...f.register('telefone')} />}</Field>
       <Field label="Endereço">{(id) => <Input id={id} {...f.register('endereco')} />}</Field>
@@ -68,10 +86,11 @@ export function ClientesPage() {
           acao={<Button onClick={() => setEditando('novo')}>Cadastrar cliente</Button>} />)}>
         {(d) => (
           <>
-            <Table head={['Nome', 'Documento', 'Telefone', 'Situação', '']}>
+            <Table head={['Nome', 'Tipo', 'Documento', 'Telefone', 'Situação', '']}>
               {d.items.map((c) => (
-                <tr key={c.id} className={c.ativo ? '' : 'opacity-60'}>
+                <tr key={c.id} className={c.ativo ? '' : 'text-muted'}>
                   <Td className="font-medium">{c.nome}</Td>
+                  <Td className="text-muted">{c.tipo_comercio_nome ?? '—'}</Td>
                   <Td className="text-muted">{c.documento ?? '—'}</Td>
                   <Td className="text-muted">{c.telefone ?? '—'}</Td>
                   <Td>{c.ativo ? <Badge tom="verde">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>

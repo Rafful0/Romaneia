@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { Button, EmptyState, Field, Input, Modal, PageHeader, Pagination, QueryState, StatusPedidoBadge, StatusRomaneioBadge, Table, Td } from '../components/ui'
+import { Button, EmptyState, Field, Input, Modal, Num, PageHeader, Pagination, QueryState, StatusPedidoBadge, StatusRomaneioBadge, Table, Td } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { data, hojeISO } from '../lib/format'
 import { api } from '../services/api'
@@ -57,14 +57,14 @@ export function RotasPage() {
       <QueryState q={rotas} vazio={(d) => d.total === 0 && <EmptyState titulo="Nenhuma rota." acao={nova} />}>
         {(d) => (
           <>
-            <Table head={['Rota', 'Data', 'Pedidos', 'Confirmados', 'Romaneio']}>
+            <Table head={['Rota', 'Data', <Num>Pedidos</Num>, <Num>Confirmados</Num>, 'Romaneio']}>
               {d.items.map((r) => (
                 <tr key={r.id} className="hover:bg-surface-2">
                   <Td><Link to={`/rotas/${r.id}`} className="font-medium hover:text-brand">{r.nome}</Link></Td>
                   <Td>{data(r.data)}</Td>
-                  <Td>{r.total_pedidos}</Td>
-                  <Td>{r.confirmados}</Td>
-                  <Td>{r.romaneio_atual ? <span className="flex items-center gap-2">v{r.romaneio_atual.versao} <StatusRomaneioBadge s={r.romaneio_atual.status} /></span> : <span className="text-muted">—</span>}</Td>
+                  <Td className="text-right">{r.total_pedidos}</Td>
+                  <Td className="text-right">{r.confirmados}</Td>
+                  <Td>{r.romaneio_atual ? <span className="flex items-center gap-2"><span className="font-mono text-xs text-ink-2">v{r.romaneio_atual.versao}</span> <StatusRomaneioBadge s={r.romaneio_atual.status} /></span> : <span className="text-muted">—</span>}</Td>
                 </tr>
               ))}
             </Table>
@@ -73,7 +73,7 @@ export function RotasPage() {
         )}
       </QueryState>
 
-      <h2 className="mb-3 mt-8 text-sm font-semibold text-muted">Pedidos sem rota</h2>
+      <h2 className="mb-2 mt-8 text-sm font-semibold text-ink-2">Pedidos sem rota</h2>
       <QueryState q={semRota} vazio={(d) => d.total === 0 && <EmptyState titulo="Todos os pedidos abertos já estão em uma rota." />}>
         {(d) => (
           <Table head={['Nº', 'Cliente', 'Entrega', 'Status']}>

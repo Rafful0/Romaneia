@@ -68,6 +68,8 @@ cd frontend && PW_CHANNEL=msedge npx playwright test     # ou: npx playwright in
 ```
 
 `TEST_PG_ADMIN_URL` muda o Postgres usado pelo pytest; `E2E_BASE_URL` muda o alvo do Playwright.
+O pytest usa o mesmo papel `romaneia_app` do compose: se você mudou `APP_DB_PASSWORD` no `.env`, exporte o mesmo valor antes de rodar os testes.
+As migrações nunca trocam a senha de um papel que já existe; para trocar, use `ALTER ROLE romaneia_app PASSWORD '...'`.
 O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 
 ## Arquitetura e regras
@@ -96,15 +98,22 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 - **Versão do romaneio**: alterar, cancelar, confirmar, incluir ou remover pedido de uma rota com romaneio ativo marca o
   romaneio como **desatualizado**, que bloqueia a separação até que uma nova versão seja gerada (a anterior fica "substituída").
   Se a separação já começou, essas alterações são **recusadas (409)**, para não invalidar trabalho físico em andamento.
+- **Tipo de comércio** (padaria, restaurante, mercado...) é cadastrado por empresa e atribuído ao **cliente**. A leitura
+  "O que pedem" mostra os produtos mais pedidos por clientes de cada tipo, por **produto + unidade**, no período escolhido
+  (pedidos cancelados e itens sem produto identificado ficam de fora). No formulário de pedido, ao escolher um cliente
+  classificado, os produtos mais pedidos pelo tipo dele aparecem como sugestões de um clique.
+- **WhatsApp (link wa.me)**: no pedido, o botão "Enviar no WhatsApp" abre o WhatsApp do funcionário com a mensagem do
+  pedido pronta para o telefone do cliente (DDI 55 adicionado; número inválido desabilita o botão). O envio é manual,
+  então o sistema não registra se a mensagem foi de fato enviada.
 - **Separação** com controle otimista por item (`versao`): marcar/desmarcar com versão antiga retorna 409 informando
   quem marcou. Ninguém sobrescreve em silêncio o que outra pessoa fez.
 
 ### Papéis
-- **admin**: tudo, mais inativar clientes/produtos e ver o histórico (auditoria).
-- **operador**: cadastros, pedidos, rotas, romaneios e separação.
+- **admin**: tudo, mais inativar clientes, produtos e tipos de comércio e ver o histórico (auditoria).
+- **operador**: cadastros (incluindo tipos de comércio), pedidos, rotas, romaneios e separação.
 
 ### API (prefixo `/api`)
-`auth/login|logout|me`, `clientes`, `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
+`auth/login|logout|me`, `clientes`, `tipos-comercio` (+ `/{id}/leitura?dias=`), `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
 `/romaneios`), `romaneios` (+ `/itens/{id}/separacao`), `dashboard`, `usuarios`, `auditoria`, `health`.
 Listas paginadas: `?page=&page_size=` → `{items, total, page, page_size}`.
 Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa em http://localhost:8000/docs.
@@ -114,7 +123,8 @@ Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa
 **Funciona e tem teste automatizado:** login/logout/sessão expirada, rotas privadas, dashboard, clientes, produtos
 (código único, apelidos), pedidos (itens múltiplos, filtros, confirmar, cancelar com justificativa, edição com revisão),
 rotas (incluir/remover, pedidos sem rota), romaneios (geração, visão por produto/cliente/pedidos de origem, versões),
-separação (responsável, horário, %, conflito entre usuários), histórico com filtro por período e usuário, isolamento entre empresas.
+separação (responsável, horário, %, conflito entre usuários), histórico com filtro por período e usuário, isolamento entre empresas,
+tipos de comércio (cadastro, leitura do que cada tipo pede, sugestão no pedido) e link de WhatsApp do pedido.
 
 **Parcial / não verificado:**
 - Impressão do romaneio: há CSS de `@media print` (esconde menu e botões, fundo branco), mas a saída impressa não foi conferida.
@@ -125,4 +135,5 @@ separação (responsável, horário, %, conflito entre usuários), histórico co
 - Gestão de usuários pela interface (usuários só via seed/SQL); reativar cliente/produto inativado.
 - Revogação de token no logout (o JWT vale até expirar se tiver sido copiado), limite de tentativas de login, token CSRF
   (a proteção atual é `SameSite=Lax` + CORS restrito + JSON).
-- WhatsApp, IA, otimização de rotas, LGPD completa, estimativa de custos, deploy em produção.
+- Envio automático de WhatsApp (API oficial da Meta), confirmação de entrega/leitura e opt-in do cliente.
+- IA, otimização de rotas, LGPD completa, estimativa de custos, deploy em produção.

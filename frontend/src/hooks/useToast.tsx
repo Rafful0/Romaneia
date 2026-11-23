@@ -20,7 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {lista.map((t) => (
           <div key={t.id} role={t.tipo === 'erro' ? 'alert' : 'status'}
             className={`rounded-md border px-4 py-3 text-sm shadow-lg ${t.tipo === 'erro'
-              ? 'border-danger/50 bg-[#2a1414] text-danger' : 'border-brand/40 bg-[#0f2418] text-brand'}`}>
+              ? 'border-l-2 border-line border-l-danger bg-surface-2 text-ink' : 'border-l-2 border-line border-l-brand bg-surface-2 text-ink'}`}>
             {t.texto}
           </div>
         ))}

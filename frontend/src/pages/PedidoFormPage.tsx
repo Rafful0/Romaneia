@@ -25,6 +25,20 @@ export function PedidoFormPage() {
     defaultValues: { cliente_id: '', data_entrega: hojeISO(), observacao: '', itens: [itemVazio()] },
   })
   const itens = useFieldArray({ control: f.control, name: 'itens' })
+  // Sugestão: o que clientes do mesmo tipo de comércio mais pedem (histórico real, últimos 90 dias).
+  const clienteId = f.watch('cliente_id')
+  const tipoId = clientes.data?.items.find((c) => c.id === clienteId)?.tipo_comercio_id
+  const sugestoes = useQuery({
+    queryKey: ['tipos-comercio', 'leitura', tipoId, 90], queryFn: () => api.tiposComercio.leitura(tipoId!, 90), enabled: !!tipoId,
+  })
+  const valores = f.watch('itens')
+  const jaTem = (pid: string, un: string) => valores.some((i) => i.produto_id === pid && i.unidade === un)
+  const adicionar = (pid: string, un: Unidade) => {
+    const vazio = valores.findIndex((i) => !i.produto_id && !i.texto_original && !i.quantidade)
+    if (vazio < 0) return itens.append({ produto_id: pid, texto_original: '', quantidade: '', unidade: un })
+    f.setValue(`itens.${vazio}.produto_id`, pid)
+    f.setValue(`itens.${vazio}.unidade`, un)
+  }
   useEffect(() => {
     const p = pedido.data
     if (p) f.reset({
@@ -54,6 +68,7 @@ export function PedidoFormPage() {
   const listaClientes = clientes.data!.items
   const clienteAtualFora = pedido.data && !listaClientes.some((c) => c.id === pedido.data!.cliente_id)
   const prods = produtos.data!.items
+  const sugeridos = (sugestoes.data?.itens ?? []).filter((s) => prods.some((p) => p.id === s.produto_id)).slice(0, 8)
   const e = f.formState.errors
   return (
     <>
@@ -81,14 +96,37 @@ export function PedidoFormPage() {
             <h2 className="text-sm font-semibold">Itens</h2>
             <Button type="button" variant="secondary" onClick={() => itens.append(itemVazio())}>Adicionar item</Button>
           </div>
+          {tipoId && sugestoes.data && (
+            <div className="mb-4 rounded border-l-2 border-brand/70 bg-surface-2 px-3 py-2.5" data-testid="sugestoes">
+              {sugeridos.length === 0
+                ? <p className="text-xs text-muted">Ainda não há histórico de pedidos para o tipo <strong className="text-ink">{sugestoes.data.tipo.nome}</strong>.</p>
+                : (
+                  <>
+                    <p className="mb-2 text-xs text-muted">Mais pedidos por clientes do tipo <strong className="text-ink">{sugestoes.data.tipo.nome}</strong> (últimos 90 dias). Clique para adicionar:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {sugeridos.map((s) => {
+                        const tem = jaTem(s.produto_id, s.unidade)
+                        return (
+                          <Button key={s.produto_id + s.unidade} type="button" variant="secondary" disabled={tem}
+                            aria-label={`${tem ? 'Já adicionado' : 'Adicionar'}: ${s.produto_nome} em ${s.unidade}`}
+                            onClick={() => adicionar(s.produto_id, s.unidade)}>
+                            {tem ? '✓' : '+'} {s.produto_nome} ({s.unidade})
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+            </div>
+          )}
           {e.itens?.root?.message && <p role="alert" className="mb-2 text-xs text-danger">{e.itens.root.message}</p>}
           {e.itens?.message && <p role="alert" className="mb-2 text-xs text-danger">{e.itens.message}</p>}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col divide-y divide-line">
             {itens.fields.map((campo, n) => {
               const ie = e.itens?.[n]
               const produtoId = f.watch(`itens.${n}.produto_id`)
               return (
-                <div key={campo.id} className="grid items-start gap-2 rounded-md border border-line p-3 md:grid-cols-[2fr_2fr_1fr_1fr_auto]" data-testid="item-pedido">
+                <div key={campo.id} className="grid items-start gap-2 py-3 first:pt-0 last:pb-0 md:grid-cols-[2fr_2fr_1fr_1fr_auto]" data-testid="item-pedido">
                   <Field label={`Produto (item ${n + 1})`}>
                     {(fid) => (
                       <Select id={fid} {...f.register(`itens.${n}.produto_id`, {
@@ -107,11 +145,11 @@ export function PedidoFormPage() {
                     {(fid) => <Input id={fid} placeholder={produtoId ? 'opcional' : 'como o cliente pediu'} aria-invalid={!!ie?.texto_original} {...f.register(`itens.${n}.texto_original`)} />}
                   </Field>
                   <Field label="Quantidade *" erro={ie?.quantidade?.message}>
-                    {(fid) => <Input id={fid} inputMode="decimal" aria-invalid={!!ie?.quantidade} {...f.register(`itens.${n}.quantidade`)} />}
+                    {(fid) => <Input id={fid} inputMode="decimal" className="text-right font-semibold" aria-invalid={!!ie?.quantidade} {...f.register(`itens.${n}.quantidade`)} />}
                   </Field>
                   <Field label="Unidade *" erro={ie?.unidade?.message}>
                     {(fid) => (
-                      <Select id={fid} aria-invalid={!!ie?.unidade} {...f.register(`itens.${n}.unidade`)}>
+                      <Select id={fid} className="font-mono" aria-invalid={!!ie?.unidade} {...f.register(`itens.${n}.unidade`)}>
                         <option value="">—</option>
                         {UNIDADES.map((u) => <option key={u.valor} value={u.valor as Unidade}>{u.valor}</option>)}
                       </Select>

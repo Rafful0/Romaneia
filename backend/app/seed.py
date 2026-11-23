@@ -10,7 +10,7 @@ from app.security import hash_senha
 
 EMPRESA = "Distribuidora Demonstração (dados fictícios)"
 USUARIOS = [("Ana Admin (demo)", "admin@demo.test", "admin"), ("Otávio Operador (demo)", "operador@demo.test", "operador")]
-CLIENTES = ["Mercadinho Exemplo", "Padaria Fictícia", "Restaurante Teste"]
+CLIENTES = [("Mercadinho Exemplo", "Mercado"), ("Padaria Fictícia", "Padaria"), ("Restaurante Teste", "Restaurante")]
 PRODUTOS = [("ARR5", "Arroz tipo 1 5kg", "fd", ["arroz"]), ("FEI1", "Feijão carioca 1kg", "kg", ["feijao", "feijão"]),
             ("OLE9", "Óleo de soja 900ml", "cx", ["oleo"]), ("TOM", "Tomate", "kg", []), ("OVO", "Ovos", "dz", [])]
 
@@ -26,8 +26,13 @@ def main() -> None:
         for nome, email, papel in USUARIOS:
             c.execute(text("insert into usuarios (empresa_id, nome, email, senha_hash, papel) values (:e,:n,:m,:h,:p)"),
                       {"e": emp, "n": nome, "m": email, "h": hash_senha(senha), "p": papel})
-        for nome in CLIENTES:
-            c.execute(text("insert into clientes (empresa_id, nome) values (:e, :n)"), {"e": emp, "n": nome})
+        tipos = {}
+        for tipo in sorted({t for _, t in CLIENTES}):
+            tipos[tipo] = c.execute(text("insert into tipos_comercio (empresa_id, nome) values (:e, :n) returning id"),
+                                    {"e": emp, "n": tipo}).scalar()
+        for nome, tipo in CLIENTES:
+            c.execute(text("insert into clientes (empresa_id, nome, tipo_comercio_id) values (:e, :n, :t)"),
+                      {"e": emp, "n": nome, "t": tipos[tipo]})
         for cod, nome, un, apelidos in PRODUTOS:
             pid = c.execute(text("insert into produtos (empresa_id, codigo, nome, unidade) values (:e,:c,:n,:u) "
                                  "returning id"), {"e": emp, "c": cod, "n": nome, "u": un}).scalar()

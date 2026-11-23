@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { ButtonLink, Badge, Button, Card, PageHeader, QueryState, StatusPedidoBadge, Table, Td } from '../components/ui'
+import { ButtonLink, Badge, Button, Card, Num, PageHeader, Qtd, QueryState, StatusPedidoBadge, Table, Td } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { data, dataHora, qtd } from '../lib/format'
+import { linkWhatsApp } from '../lib/whatsapp'
 import { api } from '../services/api'
 import type { Pedido } from '../types'
 
@@ -32,10 +33,14 @@ export function PedidoDetalhePage() {
     <QueryState q={q}>
       {(p) => {
         const editavel = p.status === 'pendente' || p.status === 'confirmado'
+        const whatsapp = linkWhatsApp(p)
         return (
           <>
             <PageHeader titulo={`Pedido #${p.numero}`} sub={<span className="flex items-center gap-2"><StatusPedidoBadge s={p.status} /> revisão {p.revisao}</span>}
               acoes={<>
+                {whatsapp
+                  ? <ButtonLink to={whatsapp} target="_blank" rel="noopener noreferrer" variant="secondary">Enviar no WhatsApp</ButtonLink>
+                  : <Button variant="secondary" disabled>WhatsApp: cliente sem telefone válido</Button>}
                 {editavel && <ButtonLink to={`/pedidos/${p.id}/editar`} variant="secondary">Editar</ButtonLink>}
                 {p.status === 'pendente' && <Button loading={confirmar.isPending} onClick={() => confirmar.mutate()}>Confirmar pedido</Button>}
                 {editavel && <Button variant="danger" onClick={() => setCancelando(true)}>Cancelar pedido</Button>}
@@ -50,20 +55,22 @@ export function PedidoDetalhePage() {
                 Cancelado. Motivo: {p.motivo_cancelamento}
               </div>
             )}
-            <Card className="mb-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div><div className="text-xs text-muted">Cliente</div>{p.cliente_nome}</div>
-              <div><div className="text-xs text-muted">Entrega</div>{data(p.data_entrega)}</div>
-              <div><div className="text-xs text-muted">Rota</div>{p.rota_id ? <Link className="text-brand hover:underline" to={`/rotas/${p.rota_id}`}>{p.rota_nome} ({data(p.rota_data)})</Link> : 'Sem rota'}</div>
-              <div><div className="text-xs text-muted">Criado por</div>{p.criado_por_nome} em {dataHora(p.criado_em)}</div>
-              {p.observacao && <div className="sm:col-span-2 lg:col-span-4"><div className="text-xs text-muted">Observação</div>{p.observacao}</div>}
+            <Card className="mb-4 text-sm">
+              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div><dt className="text-xs text-muted">Cliente</dt><dd className="mt-0.5 font-medium">{p.cliente_nome}</dd></div>
+                <div><dt className="text-xs text-muted">Entrega</dt><dd className="mt-0.5">{data(p.data_entrega)}</dd></div>
+                <div><dt className="text-xs text-muted">Rota</dt><dd className="mt-0.5">{p.rota_id ? <Link className="text-brand hover:underline" to={`/rotas/${p.rota_id}`}>{p.rota_nome} ({data(p.rota_data)})</Link> : 'Sem rota'}</dd></div>
+                <div><dt className="text-xs text-muted">Criado por</dt><dd className="mt-0.5">{p.criado_por_nome} em {dataHora(p.criado_em)}</dd></div>
+                {p.observacao && <div className="sm:col-span-2 lg:col-span-4"><dt className="text-xs text-muted">Observação</dt><dd className="mt-0.5">{p.observacao}</dd></div>}
+              </dl>
             </Card>
-            <Table head={['#', 'Produto', 'Descrição original', 'Quantidade']}>
+            <Table head={['#', 'Produto', 'Descrição original', <Num>Quantidade</Num>]}>
               {p.itens.map((i) => (
                 <tr key={i.id}>
-                  <Td className="text-muted">{i.posicao + 1}</Td>
+                  <Td className="w-10 text-muted">{i.posicao + 1}</Td>
                   <Td>{i.produto_id ? <><span className="font-mono text-xs text-muted">{i.produto_codigo}</span> {i.produto_nome}</> : <Badge tom="amarelo">Não identificado</Badge>}</Td>
                   <Td className="text-muted">{i.texto_original ?? '—'}</Td>
-                  <Td className="font-medium">{qtd(i.quantidade)} {i.unidade}</Td>
+                  <Td className="text-right"><Qtd v={qtd(i.quantidade)} un={i.unidade} /></Td>
                 </tr>
               ))}
             </Table>

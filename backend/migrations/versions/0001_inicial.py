@@ -230,12 +230,13 @@ def upgrade() -> None:
     bind.execute(text("select set_config('romaneia.app_pw', :pw, true)"), {"pw": senha})
     op.execute("""
     do $$ begin
+      -- O papel é do cluster inteiro: nunca trocar a senha de um papel existente aqui (outro banco no mesmo
+      -- servidor, ex. o de testes, derrubaria a aplicação). Troca de senha é manual: ALTER ROLE.
       if not exists (select 1 from pg_roles where rolname = 'romaneia_app') then
         execute format('create role romaneia_app login nosuperuser nobypassrls password %L',
                        current_setting('romaneia.app_pw'));
       else
-        execute format('alter role romaneia_app login nosuperuser nobypassrls password %L',
-                       current_setting('romaneia.app_pw'));
+        alter role romaneia_app login nosuperuser nobypassrls;
       end if;
     end $$;
     """)

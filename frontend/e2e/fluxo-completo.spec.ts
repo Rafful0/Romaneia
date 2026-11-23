@@ -9,6 +9,7 @@ const CLIENTE = `E2E Mercado ${ts}`
 const P1 = { codigo: `E2E${ts}A`, nome: `E2E Farinha ${ts}`, un: 'cx' }
 const P2 = { codigo: `E2E${ts}B`, nome: `E2E Tomate ${ts}`, un: 'kg' }
 const ROTA = `E2E Rota ${ts}`
+const TIPO = `E2E Padaria ${ts}`
 
 async function toast(page: Page, texto: string | RegExp) {
   await expect(page.getByRole('status').filter({ hasText: texto }).last()).toBeVisible()
@@ -29,13 +30,19 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await expect(page).toHaveURL(/\/pedidos$/) // volta para onde tentou ir
   await expect(page.getByRole('heading', { name: 'Pedidos' })).toBeVisible()
 
-  // 3. Cliente
-  await page.getByRole('link', { name: 'Clientes' }).click()
+  // 3. Tipo de comércio + cliente classificado
+  await page.getByRole('link', { name: 'Tipos de comércio' }).click()
+  await page.getByRole('button', { name: 'Novo tipo' }).first().click()
+  await page.getByRole('dialog').getByLabel('Nome *').fill(TIPO)
+  await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
+  await toast(page, 'Tipo de comércio criado')
+  await page.getByRole('link', { name: 'Clientes', exact: true }).click()
   await page.getByRole('button', { name: 'Novo cliente' }).first().click()
   await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Informe o nome')).toBeVisible()
   await page.getByLabel('Nome *').fill(CLIENTE)
   await page.getByLabel('Telefone').fill('(11) 90000-0000')
+  await page.getByRole('dialog').getByLabel('Tipo de comércio').selectOption({ label: TIPO })
   await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
   await toast(page, 'Cliente criado')
   await expect(page.getByRole('cell', { name: CLIENTE })).toBeVisible()
@@ -95,6 +102,31 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await toast(page, `Pedido #${numero} confirmado`)
   await page.reload()
   await expect(page.getByText('Confirmado').first()).toBeVisible()
+  // WhatsApp (click-to-chat): link para o telefone do cliente com a mensagem do pedido
+  const wa = await page.getByRole('link', { name: 'Enviar no WhatsApp' }).getAttribute('href')
+  expect(wa).toMatch(/^https:\/\/wa\.me\/5511900000000\?text=/)
+  const texto = decodeURIComponent(wa!.split('text=')[1])
+  expect(texto).toContain(`Seu pedido #${numero} foi confirmado.`)
+  expect(texto).toContain(`- 10 cx ${P1.nome}`)
+  expect(texto).toContain(`- 10 kg ${P1.nome}`)
+
+  // Leitura do tipo de comércio: o que clientes desse tipo pedem (por produto + unidade)
+  await page.getByRole('link', { name: 'Tipos de comércio' }).click()
+  await page.getByRole('row').filter({ hasText: TIPO }).getByRole('link', { name: 'O que pedem' }).click()
+  await expect(page.getByRole('heading', { name: `O que pede: ${TIPO}` })).toBeVisible()
+  const leitura = page.getByRole('row').filter({ hasText: P1.nome })
+  await expect(leitura).toHaveCount(2)
+  await expect(leitura.filter({ hasText: '10 cx' })).toContainText('1 de 1 pedidos (100%)')
+  await expect(leitura.filter({ hasText: '10 kg' })).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: P2.nome })).toContainText('2,5 kg')
+  // Sugestão no próximo pedido do mesmo cliente
+  await page.getByRole('link', { name: 'Pedidos', exact: true }).click()
+  await page.getByRole('link', { name: 'Novo pedido' }).first().click()
+  await page.getByLabel('Cliente *').selectOption({ label: CLIENTE })
+  await expect(page.getByTestId('sugestoes')).toContainText(`Mais pedidos por clientes do tipo ${TIPO}`)
+  await page.getByRole('button', { name: `Adicionar: ${P2.nome} em kg` }).click()
+  await expect(itens.nth(0).getByRole('combobox').first()).toHaveValue(/.+/)
+  await expect(page.getByRole('button', { name: `Já adicionado: ${P2.nome} em kg` })).toBeDisabled()
 
   // 7. Rota: criar, incluir o pedido
   await page.getByRole('link', { name: 'Rotas' }).click()

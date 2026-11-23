@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ButtonLink, Button, Card, PageHeader, QueryState, StatusPedidoBadge, StatusRomaneioBadge, Table, Td } from '../components/ui'
+import { ButtonLink, Button, Card, Num, PageHeader, Qtd, QueryState, StatusPedidoBadge, StatusRomaneioBadge, Table, Td } from '../components/ui'
 import { data, dataHora, qtd } from '../lib/format'
 import { api } from '../services/api'
 
@@ -29,26 +29,26 @@ export function RomaneioDetalhePage() {
             </div>
           )}
           {r.status === 'substituido' && <p className="no-print mb-4 text-sm text-muted">Esta versão foi substituída por uma mais recente.</p>}
-          <div className="mb-4 text-sm text-muted">Separação: {r.progresso.separados}/{r.progresso.total} itens ({r.progresso.percentual}%)</div>
+          <div className="mb-4 text-sm text-ink-2">Separação: {r.progresso.separados}/{r.progresso.total} itens ({r.progresso.percentual}%)</div>
 
-          <div role="tablist" className="no-print mb-3 flex gap-1 border-b border-line">
+          <div role="tablist" className="no-print mb-4 flex gap-4 border-b border-line">
             {ABAS.map(([k, rot]) => (
               <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
-                className={'-mb-px border-b-2 px-3 py-2 text-sm ' + (aba === k ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink')}>
+                className={'-mb-px border-b-2 py-2 text-sm font-medium transition-colors ' + (aba === k ? 'border-brand text-ink' : 'border-transparent text-muted hover:text-ink')}>
                 {rot}
               </button>
             ))}
           </div>
 
           {aba === 'produto' && (
-            <Table head={['Código', 'Produto', 'Total', 'Origem', 'Separado']}>
+            <Table head={['Código', 'Produto', <Num>Total</Num>, 'Origem', 'Separado']}>
               {r.itens.map((i) => (
                 <tr key={i.id}>
-                  <Td className="font-mono text-xs">{i.produto_codigo}</Td>
+                  <Td className="whitespace-nowrap font-mono text-xs text-ink-2">{i.produto_codigo}</Td>
                   <Td className="font-medium">{i.produto_nome}</Td>
-                  <Td className="whitespace-nowrap text-base font-semibold">{qtd(i.quantidade_total)} {i.unidade}</Td>
+                  <Td className="pr-6 text-right text-base"><Qtd v={qtd(i.quantidade_total)} un={i.unidade} /></Td>
                   <Td className="text-xs text-muted">{i.origens.map((o) => `#${o.pedido_numero} ${o.cliente_nome}: ${qtd(o.quantidade)}`).join(' · ')}</Td>
-                  <Td>{i.separado_em ? `✓ ${i.separado_por_nome}` : '☐'}</Td>
+                  <Td className={'whitespace-nowrap ' + (i.separado_em ? 'text-brand' : 'text-muted')}>{i.separado_em ? `✓ ${i.separado_por_nome}` : '☐'}</Td>
                 </tr>
               ))}
             </Table>
@@ -56,15 +56,15 @@ export function RomaneioDetalhePage() {
           {aba === 'cliente' && (
             <div className="grid gap-3 md:grid-cols-2">
               {r.por_cliente.map((c) => (
-                <Card key={c.cliente_id}>
-                  <div className="mb-2 flex items-baseline justify-between">
+                <Card key={c.cliente_id} className="p-0!">
+                  <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
                     <h3 className="font-semibold">{c.cliente_nome}</h3>
-                    <span className="text-xs text-muted">{c.pedidos.map((n) => `#${n}`).join(', ')}</span>
+                    <span className="font-mono text-xs text-muted">{c.pedidos.map((n) => `#${n}`).join(', ')}</span>
                   </div>
-                  <ul className="text-sm">
+                  <ul className="divide-y divide-line px-4 text-sm">
                     {c.itens.map((i, n) => (
-                      <li key={n} className="flex justify-between border-t border-line py-1">
-                        <span>{i.produto_nome}</span><span className="font-medium">{qtd(i.quantidade)} {i.unidade}</span>
+                      <li key={n} className="flex items-baseline justify-between gap-3 py-1.5">
+                        <span>{i.produto_nome}</span><Qtd v={qtd(i.quantidade)} un={i.unidade} />
                       </li>
                     ))}
                   </ul>

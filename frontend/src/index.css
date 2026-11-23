@@ -1,29 +1,53 @@
 @import "tailwindcss";
 
+/* Doca: neutros escuros com leve temperatura verde; verde só para ação e "feito".
+   Contraste (WCAG) medido: ink 15.8:1, ink-2 9.5:1, muted ≥ 5.7:1 em qualquer superfície,
+   branco sobre brand-strong 5.15:1, line-strong (borda de campo) ≥ 3:1. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-bg: #0b1110;
-  --color-surface: #111a17;
-  --color-surface-2: #16221e;
-  --color-line: #22322c;
-  --color-ink: #e5eee9;
-  --color-muted: #8ba198;
-  --color-brand: #22c55e;
-  --color-brand-strong: #16a34a;
-  --color-danger: #f87171;
-  --color-warn: #fbbf24;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --color-bg: #0d1210;
+  --color-surface: #121915;
+  --color-surface-2: #18211c;
+  --color-line: #242e29;
+  --color-line-strong: #5f6e66;
+  --color-ink: #e7ece9;
+  --color-ink-2: #bcc7c1;
+  --color-muted: #8e9c95;
+  --color-brand: #4cc47f;
+  --color-brand-strong: #1e7d45;
+  --color-brand-hover: #20824a;
+  --color-danger: #f47067;
+  --color-warn: #e3b341;
+  --color-info: #6cb6ff;
+  --color-done: #b392f0;
 }
 
+:root { color-scheme: dark; }
 html, body, #root { height: 100%; }
-body { @apply bg-bg text-ink font-sans antialiased; }
+/* Algarismos tabulares em todo o app: quantidades, datas e contadores alinham em coluna. */
+body { @apply bg-bg text-ink font-sans antialiased; font-variant-numeric: tabular-nums; }
 :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-input[type="date"] { color-scheme: dark; }
+::placeholder { color: var(--color-muted); opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { transition-duration: 0s !important; scroll-behavior: auto !important; }
+  .animate-spin { animation-duration: 2.4s; }
+}
 
 @media print {
+  /* No papel os mesmos tokens viram tinta escura sobre branco (status continuam distinguíveis). */
+  :root {
+    color-scheme: light;
+    --color-bg: #fff; --color-surface: #fff; --color-surface-2: #fff; --color-line: #bbb; --color-line-strong: #999;
+    --color-ink: #000; --color-ink-2: #222; --color-muted: #555; --color-brand: #1a7f37;
+    --color-warn: #7a5200; --color-info: #0b5cad; --color-done: #6b3fb8; --color-danger: #b42318;
+  }
   body { background: #fff; color: #000; }
   .no-print { display: none !important; }
   .print-plain { background: #fff !important; color: #000 !important; border-color: #999 !important; box-shadow: none !important; }
   .print-plain * { color: #000 !important; border-color: #bbb !important; background: transparent !important; }
   main { padding: 0 !important; overflow: visible !important; }
+  tr { break-inside: avoid; }
   @page { margin: 12mm; }
 }

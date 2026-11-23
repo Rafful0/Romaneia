@@ -94,11 +94,11 @@ export function ProdutosPage() {
           <>
             <Table head={['Código', 'Nome', 'Unidade', 'Apelidos', 'Situação', '']}>
               {d.items.map((p) => (
-                <tr key={p.id} className={p.ativo ? '' : 'opacity-60'}>
+                <tr key={p.id} className={p.ativo ? '' : 'text-muted'}>
                   <Td className="font-mono text-xs">{p.codigo}</Td>
                   <Td className="font-medium">{p.nome}</Td>
-                  <Td><Badge>{p.unidade}</Badge></Td>
-                  <Td><div className="flex flex-wrap gap-1">{p.apelidos.length ? p.apelidos.map((a) => <Badge key={a} tom="azul">{a}</Badge>) : <span className="text-muted">—</span>}</div></Td>
+                  <Td className="font-mono text-xs text-ink-2">{p.unidade}</Td>
+                  <Td><div className="flex flex-wrap gap-1">{p.apelidos.length ? p.apelidos.map((a) => <Badge key={a}>{a}</Badge>) : <span className="text-muted">—</span>}</div></Td>
                   <Td>{p.ativo ? <Badge tom="verde">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>
                   <Td className="text-right">
                     <div className="flex justify-end gap-1">

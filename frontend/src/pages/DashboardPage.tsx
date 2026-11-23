@@ -12,31 +12,30 @@ export function DashboardPage() {
       <QueryState q={q}>
         {(d) => (
           <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {/* Um painel só, com divisórias de 1px (gap sobre fundo de linha), em vez de quatro cartões soltos. */}
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line lg:grid-cols-4">
               {[
                 { rot: 'Pendentes', v: d.pendentes, to: '/pedidos?status=pendente' },
                 { rot: 'Confirmados', v: d.confirmados, to: '/pedidos?status=confirmado' },
                 { rot: 'Em separação', v: d.em_separacao, to: '/pedidos?status=em_separacao' },
                 { rot: 'Sem rota', v: d.sem_rota, to: '/rotas' },
               ].map((c) => (
-                <Link key={c.rot} to={c.to} className="group">
-                  <Card className="transition group-hover:border-brand/50">
-                    <div className="text-xs text-muted">{c.rot}</div>
-                    <div className="mt-1 text-3xl font-semibold" data-testid={`contador-${c.rot}`}>{c.v}</div>
-                  </Card>
+                <Link key={c.rot} to={c.to} className="bg-surface px-4 py-3 transition-colors hover:bg-surface-2 focus-visible:-outline-offset-2">
+                  <div className="text-xs font-medium text-ink-2">{c.rot}</div>
+                  <div className="mt-1 text-[2rem] font-semibold leading-tight tracking-[-0.02em]" data-testid={`contador-${c.rot}`}>{c.v}</div>
                 </Link>
               ))}
             </div>
-            <h2 className="mb-3 mt-8 text-sm font-semibold text-muted">Atividade recente</h2>
+            <h2 className="mb-2 mt-8 text-sm font-semibold text-ink-2">Atividade recente</h2>
             {d.atividade_recente.length === 0
               ? <EmptyState titulo="Nenhuma atividade ainda." acao={<ButtonLink to="/clientes" variant="secondary">Cadastrar cliente</ButtonLink>} />
               : (
-                <Card className="divide-y divide-line p-0">
+                <Card className="divide-y divide-line p-0!">
                   {d.atividade_recente.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm">
+                    <div key={a.id} className="flex items-baseline gap-4 px-4 py-2 text-sm">
+                      <span className="w-32 shrink-0 text-xs text-muted">{dataHora(a.criado_em)}</span>
                       <span><span className="font-medium">{a.usuario_nome ?? 'Sistema'}</span>{' '}
-                        <span className="text-muted">{descreverAtividade(a.acao, a.entidade, a.detalhes)}</span></span>
-                      <span className="shrink-0 text-xs text-muted">{dataHora(a.criado_em)}</span>
+                        <span className="text-ink-2">{descreverAtividade(a.acao, a.entidade, a.detalhes)}</span></span>
                     </div>
                   ))}
                 </Card>

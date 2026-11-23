@@ -49,7 +49,7 @@ const ACOES: Record<string, string> = {
   associar: 'incluiu pedido na', remover: 'removeu pedido da', concluir: 'concluiu', login: 'entrou no sistema',
 }
 const ENTIDADES: Record<string, string> = {
-  cliente: 'cliente', produto: 'produto', pedido: 'pedido', rota: 'rota', romaneio: 'romaneio',
+  cliente: 'cliente', produto: 'produto', pedido: 'pedido', rota: 'rota', romaneio: 'romaneio', tipo_comercio: 'tipo de comércio',
   romaneio_item: 'romaneio', usuario: '',
 }
 export function descreverAtividade(acao: string, entidade: string, detalhes: Record<string, unknown>): string {

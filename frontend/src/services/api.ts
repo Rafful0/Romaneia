@@ -1,7 +1,7 @@
 // Única camada HTTP do app. Nenhum componente chama fetch diretamente.
 import type {
   Atividade, Cliente, ClienteIn, Dashboard, Pagina, Pedido, PedidoIn, PedidoResumo, Produto, ProdutoIn,
-  Romaneio, RomaneioResumo, Rota, RotaResumo, Usuario, UsuarioResumo,
+  LeituraTipo, Romaneio, RomaneioResumo, Rota, RotaResumo, TipoComercio, Usuario, UsuarioResumo,
 } from '../types'
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api'
@@ -62,6 +62,13 @@ export const api = {
     criar: (d: ClienteIn) => post<Cliente>('/clientes', d),
     editar: (id: string, d: ClienteIn) => put<Cliente>(`/clientes/${id}`, d),
     inativar: (id: string) => post<Cliente>(`/clientes/${id}/inativar`),
+  },
+  tiposComercio: {
+    listar: (p: Params) => get<Pagina<TipoComercio>>('/tipos-comercio', p),
+    criar: (nome: string) => post<TipoComercio>('/tipos-comercio', { nome }),
+    editar: (id: string, nome: string) => put<TipoComercio>(`/tipos-comercio/${id}`, { nome }),
+    inativar: (id: string) => post<TipoComercio>(`/tipos-comercio/${id}/inativar`),
+    leitura: (id: string, dias: number) => get<LeituraTipo>(`/tipos-comercio/${id}/leitura`, { dias }),
   },
   produtos: {
     listar: (p: Params) => get<Pagina<Produto>>('/produtos', p),

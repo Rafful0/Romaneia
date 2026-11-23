@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { ButtonLink, Button, Card, PageHeader, QueryState, StatusRomaneioBadge } from '../components/ui'
+import { ButtonLink, Button, Card, PageHeader, Qtd, QueryState, StatusRomaneioBadge } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { dataHora, qtd } from '../lib/format'
 import { ApiError, api } from '../services/api'
@@ -38,34 +38,36 @@ export function SeparacaoPage() {
               </div>
             )}
             <Card className="mb-4">
-              <div className="mb-2 flex justify-between text-sm">
-                <span>{r.progresso.separados} de {r.progresso.total} itens separados</span>
-                <span className="font-semibold" data-testid="percentual">{r.progresso.percentual}%</span>
+              <div className="mb-2 flex items-baseline justify-between text-sm">
+                <span className="text-ink-2">{r.progresso.separados} de {r.progresso.total} itens separados</span>
+                <span className="text-2xl font-semibold tracking-[-0.02em]" data-testid="percentual">{r.progresso.percentual}%</span>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={r.progresso.percentual} aria-valuemin={0} aria-valuemax={100}>
-                <div className="h-full bg-brand transition-all" style={{ width: `${r.progresso.percentual}%` }} />
+              <div className="h-1.5 overflow-hidden rounded-sm bg-surface-2" role="progressbar" aria-valuenow={r.progresso.percentual} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${r.progresso.percentual}%` }} />
               </div>
             </Card>
-            <div className="flex flex-col gap-2">
+            {/* Lista de conferência: quantidade primeiro ("10 cx Farinha", como o pedido é falado);
+                item feito ganha trilho verde e esmaece para cinza legível (sem opacidade). */}
+            <ul className="divide-y divide-line overflow-hidden rounded-md border border-line bg-surface">
               {r.itens.map((it) => {
                 const feito = !!it.separado_em
                 const enviando = m.isPending && m.variables?.id === it.id
                 return (
-                  <Card key={it.id} className={'flex items-center justify-between gap-4 ' + (feito ? 'border-brand/40' : '')}>
-                    <div>
-                      <div className="font-medium">{it.produto_nome} <span className="font-mono text-xs text-muted">{it.produto_codigo}</span></div>
-                      <div className="text-xl font-semibold">{qtd(it.quantidade_total)} {it.unidade}</div>
-                      {feito && <div className="text-xs text-brand">Separado por {it.separado_por_nome} em {dataHora(it.separado_em)}</div>}
+                  <li key={it.id} className={'flex items-center gap-4 border-l-[3px] py-3 pl-3 pr-4 ' + (feito ? 'border-l-brand bg-brand/[0.04]' : 'border-l-transparent')}>
+                    <Qtd v={qtd(it.quantidade_total)} un={it.unidade} className={'w-32 shrink-0 text-right text-xl ' + (feito ? 'text-muted' : '')} />
+                    <div className="min-w-0 flex-1">
+                      <div className={feito ? 'text-ink-2' : 'font-medium'}>{it.produto_nome} <span className="font-mono text-xs text-muted">{it.produto_codigo}</span></div>
+                      {feito && <div className="mt-0.5 text-xs text-brand">Separado por {it.separado_por_nome} em {dataHora(it.separado_em)}</div>}
                     </div>
                     <Button variant={feito ? 'secondary' : 'primary'} disabled={travado || (m.isPending && !enviando)} loading={enviando}
                       aria-label={(feito ? 'Desmarcar ' : 'Marcar como separado ') + it.produto_nome + ' ' + it.unidade}
                       onClick={() => m.mutate(it)}>
                       {feito ? 'Desmarcar' : 'Marcar separado'}
                     </Button>
-                  </Card>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           </>
         )
       }}

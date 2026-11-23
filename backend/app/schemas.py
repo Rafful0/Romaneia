@@ -25,6 +25,11 @@ class ClienteIn(Base):
     documento: TextoOpc = None
     telefone: TextoOpc = None
     endereco: TextoOpc = None
+    tipo_comercio_id: UUID | None = None
+
+
+class TipoComercioIn(Base):
+    nome: Texto
 
 
 class ProdutoIn(Base):

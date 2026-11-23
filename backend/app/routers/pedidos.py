@@ -12,7 +12,7 @@ from app.schemas import CancelarIn, PedidoIn
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 STATUS = set(domain.TRANSICOES)
 
-SELECT = """select p.id, p.numero, p.cliente_id, cl.nome cliente_nome, p.rota_id, r.nome rota_nome, r.data rota_data,
+SELECT = """select p.id, p.numero, p.cliente_id, cl.nome cliente_nome, cl.telefone cliente_telefone, p.rota_id, r.nome rota_nome, r.data rota_data,
   p.data_entrega, p.status, p.observacao, p.motivo_cancelamento, p.revisao, p.criado_em, p.atualizado_em,
   u.nome criado_por_nome,
   (select count(*) from pedido_itens i where i.pedido_id = p.id) qtd_itens,
