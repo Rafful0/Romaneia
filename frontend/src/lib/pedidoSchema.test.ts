@@ -24,12 +24,12 @@ describe('itemSchema', () => {
 })
 
 describe('pedidoSchema', () => {
-  it('exige cliente e ao menos um item', () => {
-    const r = pedidoSchema.safeParse({ cliente_id: '', data_entrega: '2026-12-01', observacao: '', itens: [] })
+  it('exige fornecedor e ao menos um item', () => {
+    const r = pedidoSchema.safeParse({ fornecedor_id: '', data_entrega: '2026-12-01', observacao: '', itens: [] })
     expect(r.success).toBe(false)
     if (!r.success) {
       const campos = r.error.issues.map((i) => i.path[0])
-      expect(campos).toContain('cliente_id')
+      expect(campos).toContain('fornecedor_id')
       expect(campos).toContain('itens')
     }
   })

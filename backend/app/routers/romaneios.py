@@ -45,33 +45,33 @@ def detalhe(c: Ctx, rid) -> dict:
     itens = c.todos("""
         select ri.id, ri.produto_id, p.codigo produto_codigo, p.nome produto_nome, ri.unidade,
                ri.quantidade_total::text quantidade_total, ri.separado_em, su.nome separado_por_nome, ri.versao,
-               (select json_agg(json_build_object('pedido_numero', pe.numero, 'cliente_nome', cl.nome,
+               (select json_agg(json_build_object('pedido_numero', pe.numero, 'fornecedor_nome', fo.nome,
                                                   'quantidade', o.quantidade::text) order by pe.numero)
                   from romaneio_item_origens o join pedidos pe on pe.id = o.pedido_id
-                  join clientes cl on cl.id = pe.cliente_id where o.romaneio_item_id = ri.id) origens
+                  join fornecedores fo on fo.id = pe.fornecedor_id where o.romaneio_item_id = ri.id) origens
         from romaneio_itens ri join produtos p on p.id = ri.produto_id
         left join usuarios su on su.id = ri.separado_por
         where ri.romaneio_id = :id order by lower(p.nome), ri.unidade""", id=rid)
     linhas = c.todos("""
-        select cl.id cliente_id, cl.nome cliente_nome, pe.numero, p.codigo produto_codigo, p.nome produto_nome,
+        select fo.id fornecedor_id, fo.nome fornecedor_nome, pe.numero, p.codigo produto_codigo, p.nome produto_nome,
                ri.unidade, o.quantidade::text quantidade
         from romaneio_item_origens o join romaneio_itens ri on ri.id = o.romaneio_item_id
-        join pedidos pe on pe.id = o.pedido_id join clientes cl on cl.id = pe.cliente_id
+        join pedidos pe on pe.id = o.pedido_id join fornecedores fo on fo.id = pe.fornecedor_id
         join produtos p on p.id = ri.produto_id
-        where ri.romaneio_id = :id order by lower(cl.nome), pe.numero, lower(p.nome)""", id=rid)
-    por_cliente: OrderedDict = OrderedDict()
+        where ri.romaneio_id = :id order by lower(fo.nome), pe.numero, lower(p.nome)""", id=rid)
+    por_fornecedor: OrderedDict = OrderedDict()
     for ln in linhas:
-        g = por_cliente.setdefault(ln["cliente_id"], {"cliente_id": ln["cliente_id"], "cliente_nome": ln["cliente_nome"],
+        g = por_fornecedor.setdefault(ln["fornecedor_id"], {"fornecedor_id": ln["fornecedor_id"], "fornecedor_nome": ln["fornecedor_nome"],
                                                       "pedidos": [], "itens": []})
         if ln["numero"] not in g["pedidos"]:
             g["pedidos"].append(ln["numero"])
         g["itens"].append({k: ln[k] for k in ("produto_codigo", "produto_nome", "unidade", "quantidade")})
     pedidos = c.todos("""
-        select pe.id, pe.numero, cl.nome cliente_nome, pe.status, rp.pedido_revisao, pe.revisao revisao_atual
-        from romaneio_pedidos rp join pedidos pe on pe.id = rp.pedido_id join clientes cl on cl.id = pe.cliente_id
+        select pe.id, pe.numero, fo.nome fornecedor_nome, pe.status, rp.pedido_revisao, pe.revisao revisao_atual
+        from romaneio_pedidos rp join pedidos pe on pe.id = rp.pedido_id join fornecedores fo on fo.id = pe.fornecedor_id
         where rp.romaneio_id = :id order by pe.numero""", id=rid)
     return {**dict(r), "progresso": _progresso(c, rid), "itens": itens,
-            "por_cliente": list(por_cliente.values()), "pedidos": pedidos}
+            "por_fornecedor": list(por_fornecedor.values()), "pedidos": pedidos}
 
 
 @router.post("/rotas/{rota_id}/romaneios", status_code=201)

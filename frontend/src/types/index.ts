@@ -8,20 +8,6 @@ export interface Pagina<T> { items: T[]; total: number; page: number; page_size:
 export interface Usuario { id: string; nome: string; papel: Papel; empresa: string }
 export interface UsuarioResumo { id: string; nome: string; papel: Papel; ativo: boolean }
 
-export interface Cliente {
-  id: string; nome: string; documento: string | null; telefone: string | null; endereco: string | null
-  ativo: boolean; criado_em: string; atualizado_em: string
-  tipo_comercio_id: string | null; tipo_comercio_nome: string | null
-}
-export type ClienteIn = Pick<Cliente, 'nome' | 'documento' | 'telefone' | 'endereco' | 'tipo_comercio_id'>
-
-export interface TipoComercio { id: string; nome: string; ativo: boolean; criado_em: string; total_clientes: number }
-export interface LeituraTipo {
-  tipo: TipoComercio; dias: number; total_pedidos: number
-  itens: { produto_id: string; produto_codigo: string; produto_nome: string; produto_ativo: boolean; unidade: Unidade
-    pedidos: number; clientes: number; quantidade_total: string }[]
-}
-
 export interface Produto {
   id: string; codigo: string; nome: string; unidade: Unidade; ativo: boolean; apelidos: string[]
   criado_em: string; atualizado_em: string
@@ -33,14 +19,14 @@ export interface ItemPedido {
   produto_nome: string | null; texto_original: string | null; quantidade: string; unidade: Unidade
 }
 export interface PedidoResumo {
-  id: string; numero: number; cliente_id: string; cliente_nome: string; cliente_telefone: string | null; rota_id: string | null
+  id: string; numero: number; fornecedor_id: string; fornecedor_nome: string; fornecedor_telefone: string | null; rota_id: string | null
   rota_nome: string | null; rota_data: string | null; data_entrega: string; status: StatusPedido
   observacao: string | null; motivo_cancelamento: string | null; revisao: number; criado_em: string
   atualizado_em: string; criado_por_nome: string; qtd_itens: number; nao_identificados: number
 }
 export interface Pedido extends PedidoResumo { itens: ItemPedido[] }
 export interface ItemIn { produto_id: string | null; texto_original: string | null; quantidade: string; unidade: Unidade }
-export interface PedidoIn { cliente_id: string; data_entrega: string; observacao: string | null; itens: ItemIn[] }
+export interface PedidoIn { fornecedor_id: string; data_entrega: string; observacao: string | null; itens: ItemIn[] }
 
 export interface RomaneioRef { id: string; versao: number; status: StatusRomaneio; gerado_em?: string }
 export interface RotaResumo {
@@ -48,7 +34,7 @@ export interface RotaResumo {
   total_pedidos: number; confirmados: number; romaneio_atual: RomaneioRef | null
 }
 export interface PedidoNaRota {
-  id: string; numero: number; cliente_nome: string; status: StatusPedido; data_entrega: string
+  id: string; numero: number; fornecedor_nome: string; status: StatusPedido; data_entrega: string
   qtd_itens: number; nao_identificados: number
 }
 export interface Rota extends RotaResumo { pedidos: PedidoNaRota[]; romaneios: RomaneioRef[] }
@@ -56,7 +42,7 @@ export interface Rota extends RotaResumo { pedidos: PedidoNaRota[]; romaneios: R
 export interface RomaneioItem {
   id: string; produto_id: string; produto_codigo: string; produto_nome: string; unidade: Unidade
   quantidade_total: string; separado_em: string | null; separado_por_nome: string | null; versao: number
-  origens: { pedido_numero: number; cliente_nome: string; quantidade: string }[]
+  origens: { pedido_numero: number; fornecedor_nome: string; quantidade: string }[]
 }
 export interface RomaneioResumo {
   id: string; rota_id: string; rota_nome: string; rota_data: string; versao: number; status: StatusRomaneio
@@ -67,9 +53,9 @@ export interface Romaneio {
   motivo_desatualizado: string | null; gerado_em: string; gerado_por_nome: string; concluido_em: string | null
   progresso: { total: number; separados: number; percentual: number }
   itens: RomaneioItem[]
-  por_cliente: { cliente_id: string; cliente_nome: string; pedidos: number[];
+  por_fornecedor: { fornecedor_id: string; fornecedor_nome: string; pedidos: number[];
     itens: { produto_codigo: string; produto_nome: string; unidade: Unidade; quantidade: string }[] }[]
-  pedidos: { id: string; numero: number; cliente_nome: string; status: StatusPedido; pedido_revisao: number; revisao_atual: number }[]
+  pedidos: { id: string; numero: number; fornecedor_nome: string; status: StatusPedido; pedido_revisao: number; revisao_atual: number }[]
   pendentes_ignorados?: number
 }
 

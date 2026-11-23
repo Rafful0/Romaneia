@@ -27,7 +27,7 @@ export const itemSchema = z.object({
 }))
 
 export const pedidoSchema = z.object({
-  cliente_id: z.string().min(1, 'Escolha o cliente'),
+  fornecedor_id: z.string().min(1, 'Escolha o fornecedor'),
   data_entrega: z.string().min(1, 'Informe a data de entrega'),
   observacao: z.string().trim().max(500).transform((v) => v || null),
   itens: z.array(itemSchema).min(1, 'Adicione ao menos um item'),

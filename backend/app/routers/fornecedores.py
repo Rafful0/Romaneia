@@ -41,6 +41,11 @@ def listar(busca: str = "", ativo: bool | None = None, pg: Pagina = Depends(), c
     return pg.resposta(itens, total)
 
 
+@router.get("/{fid}")
+def obter(fid: UUID, c: Ctx = Depends(ctx)):
+    return _obter(c, fid)
+
+
 @router.post("", status_code=201)
 def criar(d: FornecedorIn, c: Ctx = Depends(ctx)):
     tel = _telefone(c, d)

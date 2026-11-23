@@ -99,7 +99,7 @@ export function CadastroPage() {
   const opcao = (valor: Dados['metodo'], rotulo: string) => (
     <label className={'flex flex-1 cursor-pointer items-center justify-center rounded px-3 py-1.5 text-sm transition-colors ' +
       'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand ' +
-      (metodo === valor ? 'bg-surface-2 font-medium text-ink' : 'text-muted hover:text-ink')}>
+      (metodo === valor ? 'bg-white/10 font-medium text-ink' : 'text-muted hover:text-ink')}>
       <input type="radio" value={valor} className="sr-only" {...f.register('metodo', { onChange: () => f.clearErrors('destino') })} />
       {rotulo}
     </label>

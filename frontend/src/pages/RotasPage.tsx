@@ -59,7 +59,7 @@ export function RotasPage() {
           <>
             <Table head={['Rota', 'Data', <Num>Pedidos</Num>, <Num>Confirmados</Num>, 'Romaneio']}>
               {d.items.map((r) => (
-                <tr key={r.id} className="hover:bg-surface-2">
+                <tr key={r.id} className="hover:bg-white/[0.05]">
                   <Td><Link to={`/rotas/${r.id}`} className="font-medium hover:text-brand">{r.nome}</Link></Td>
                   <Td>{data(r.data)}</Td>
                   <Td className="text-right">{r.total_pedidos}</Td>
@@ -76,11 +76,11 @@ export function RotasPage() {
       <h2 className="mb-2 mt-8 text-sm font-semibold text-ink-2">Pedidos sem rota</h2>
       <QueryState q={semRota} vazio={(d) => d.total === 0 && <EmptyState titulo="Todos os pedidos abertos já estão em uma rota." />}>
         {(d) => (
-          <Table head={['Nº', 'Cliente', 'Entrega', 'Status']}>
+          <Table head={['Nº', 'Fornecedor', 'Entrega', 'Status']}>
             {d.items.map((p) => (
               <tr key={p.id}>
                 <Td><Link to={`/pedidos/${p.id}`} className="font-mono hover:text-brand">#{p.numero}</Link></Td>
-                <Td>{p.cliente_nome}</Td>
+                <Td>{p.fornecedor_nome}</Td>
                 <Td>{data(p.data_entrega)}</Td>
                 <Td><StatusPedidoBadge s={p.status} /></Td>
               </tr>

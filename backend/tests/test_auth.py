@@ -27,7 +27,7 @@ def test_senha_errada_e_email_inexistente_mesmo_erro(emp_a):
 
 
 def test_sem_cookie_401():
-    r = TestClient(app).get("/api/clientes")
+    r = TestClient(app).get("/api/fornecedores")
     assert r.status_code == 401
     assert r.json()["erro"]["codigo"] == "nao_autenticado"
 
@@ -53,13 +53,13 @@ def test_logout_limpa_cookie(admin_a):
 
 
 def test_empresa_no_corpo_rejeitada(admin_a, emp_b):
-    r = admin_a.post("/api/clientes", json={"nome": "X", "empresa_id": emp_b["id"]})
+    r = admin_a.post("/api/fornecedores", json={"nome": "X", "telefone": "11988887777", "empresa_id": emp_b["id"]})
     assert r.status_code == 422
 
 
 def test_operador_nao_inativa_nem_ve_auditoria(oper_a):
-    cl = oper_a.post("/api/clientes", json={"nome": "C"}).json()
-    assert oper_a.post(f"/api/clientes/{cl['id']}/inativar").status_code == 403
+    fo = oper_a.post("/api/fornecedores", json={"nome": "F", "telefone": "11988887777"}).json()
+    assert oper_a.post(f"/api/fornecedores/{fo['id']}/inativar").status_code == 403
     assert oper_a.get("/api/auditoria").status_code == 403
 
 

@@ -10,14 +10,14 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-brand-strong text-white hover:bg-brand-hover',
-  secondary: 'bg-surface-2 text-ink border border-line-strong hover:bg-line',
+  secondary: 'bg-white/[0.06] text-ink border border-white/20 hover:bg-white/[0.12]',
   danger: 'bg-transparent text-danger border border-danger/60 hover:bg-danger/10',
-  ghost: 'bg-transparent text-ink-2 hover:text-ink hover:bg-surface-2',
+  ghost: 'bg-transparent text-ink-2 hover:text-ink hover:bg-white/[0.08]',
 }
 
 // "btn" é só um marcador: o Td encolhe botões de ação para a linha da tabela não crescer.
 const btn = (variant: Variant, className?: string) =>
-  cx('btn inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded px-3.5 text-sm font-medium transition-colors',
+  cx('btn inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3.5 text-sm font-medium transition-colors',
     'disabled:cursor-not-allowed disabled:opacity-50', VARIANTS[variant], className)
 
 export function Button({ variant = 'primary', loading, className, children, disabled, ...p }:
@@ -33,7 +33,7 @@ export function Button({ variant = 'primary', loading, className, children, disa
 export const ButtonLink = ({ variant = 'primary', className, ...p }: LinkProps & { variant?: Variant }) =>
   <Link {...p} className={btn(variant, className)} />
 
-const campo = 'w-full rounded border border-line-strong bg-surface-2 px-3 text-sm text-ink ' +
+const campo = 'w-full rounded-md border border-line-strong bg-black/25 px-3 text-sm text-ink ' +
   'focus:border-brand focus-visible:outline-offset-0 disabled:opacity-60 aria-[invalid=true]:border-danger'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
@@ -57,12 +57,12 @@ export function Field({ label, erro, children, className }:
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('rounded-md border border-line bg-surface p-4 print-plain', className)}>{children}</div>
+  return <div className={cx('rounded-2xl p-5 border border-white/12 bg-white/[0.05] shadow-xl shadow-black/25 backdrop-blur-xl print-plain', className)}>{children}</div>
 }
 
 export function PageHeader({ titulo, sub, acoes }: { titulo: string; sub?: ReactNode; acoes?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-4">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-white/10 pb-4">
       <div className="min-w-0">
         <h1 className="text-[1.375rem] font-semibold leading-tight tracking-[-0.011em]">{titulo}</h1>
         {sub && <div className="mt-1.5 text-sm text-muted">{sub}</div>}
@@ -73,7 +73,7 @@ export function PageHeader({ titulo, sub, acoes }: { titulo: string; sub?: React
 }
 
 const TONS = {
-  cinza: 'bg-surface-2 text-ink-2', verde: 'bg-brand/12 text-brand', azul: 'bg-info/12 text-info',
+  cinza: 'bg-white/[0.08] text-ink-2', verde: 'bg-brand/12 text-brand', azul: 'bg-info/12 text-info',
   amarelo: 'bg-warn/12 text-warn', vermelho: 'bg-danger/12 text-danger', roxo: 'bg-done/12 text-done',
 }
 export function Badge({ tom = 'cinza', children }: { tom?: keyof typeof TONS; children: ReactNode }) {
@@ -108,7 +108,7 @@ export function Spinner({ small }: { small?: boolean }) {
 
 export function EmptyState({ titulo, acao }: { titulo: string; acao?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line-strong/60 py-10 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/[0.03] py-10 text-center backdrop-blur-xl">
       <p className="text-sm text-muted">{titulo}</p>
       {acao}
     </div>
@@ -117,7 +117,7 @@ export function EmptyState({ titulo, acao }: { titulo: string; acao?: ReactNode 
 
 export function ErrorState({ erro, onRetry }: { erro: unknown; onRetry: () => void }) {
   return (
-    <div role="alert" className="flex flex-col items-center gap-3 rounded-md border border-danger/40 bg-danger/5 py-8 text-center">
+    <div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-danger/40 bg-danger/10 py-8 text-center backdrop-blur-xl">
       <p className="text-sm text-danger">{erro instanceof Error ? erro.message : 'Erro ao carregar'}</p>
       <Button variant="secondary" onClick={onRetry}>Tentar novamente</Button>
     </div>
@@ -145,10 +145,10 @@ export function Modal({ titulo, aberto, onClose, children }:
   }, [aberto, onClose])
   if (!aberto) return null
   return (
-    <div className="no-print fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" onMouseDown={onClose}>
+    <div className="no-print fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onMouseDown={onClose}>
       <div ref={ref} role="dialog" aria-modal="true" aria-label={titulo} onMouseDown={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-line-strong/50 bg-surface p-5 shadow-2xl shadow-black/50">
-        <h2 className="mb-4 border-b border-line pb-3 text-base font-semibold">{titulo}</h2>
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#13201a]/90 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl">
+        <h2 className="mb-4 border-b border-white/10 pb-3 text-base font-semibold">{titulo}</h2>
         {children}
       </div>
     </div>
@@ -170,12 +170,12 @@ export function Pagination({ page, pageSize, total, onPage }:
 
 export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-surface print-plain">
+    <div className="overflow-x-auto rounded-2xl border border-white/12 bg-white/[0.05] shadow-xl shadow-black/25 backdrop-blur-xl print-plain">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
+        <thead className="border-b border-white/10 bg-white/[0.04] text-xs text-ink-2">
           <tr>{head.map((h, i) => <th key={i} className="h-9 whitespace-nowrap px-3 font-semibold">{h}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-line">{children}</tbody>
+        <tbody className="divide-y divide-white/[0.07]">{children}</tbody>
       </table>
     </div>
   )

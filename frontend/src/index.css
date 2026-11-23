@@ -53,6 +53,7 @@ body { @apply bg-bg text-ink font-sans antialiased; font-variant-numeric: tabula
   }
   body { background: #fff; color: #000; }
   .no-print { display: none !important; }
+  .app-fundo { background: #fff !important; overflow: visible !important; }
   .print-plain { background: #fff !important; color: #000 !important; border-color: #999 !important; box-shadow: none !important; }
   .print-plain * { color: #000 !important; border-color: #bbb !important; background: transparent !important; }
   main { padding: 0 !important; overflow: visible !important; }

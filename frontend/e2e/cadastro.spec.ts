@@ -85,9 +85,9 @@ test('cliente cria conta por e-mail, cadastra fornecedor e entra de novo', async
   await page.reload()
   await expect(page.getByRole('cell', { name: 'Moinho E2E', exact: true })).toBeVisible()
 
-  // a conta antiga de demonstração não aparece aqui (empresas isoladas)
-  await page.getByRole('link', { name: 'Clientes', exact: true }).click()
-  await expect(page.getByText('Nenhum cliente cadastrado.')).toBeVisible()
+  // dados de outras contas não aparecem aqui (empresas isoladas)
+  await page.getByRole('link', { name: 'Produtos' }).click()
+  await expect(page.getByText('Nenhum produto cadastrado.')).toBeVisible()
 })
 
 test('cliente cria conta pelo celular e entra com o número', async ({ page }) => {

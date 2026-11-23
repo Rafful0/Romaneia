@@ -104,6 +104,8 @@ def _criar_conta(conn: Connection, empresa: str, nome: str, email=None, telefone
 
 @router.post("/cadastro/iniciar", status_code=201)
 def cadastro_iniciar(d: CadastroIniciarIn):
+    if settings.verificacao_modo != "dev":  # antes de tocar no banco: cadastro desligado não revela contas
+        raise AppError(501, "envio_nao_configurado", "Envio de código por e-mail/SMS ainda não foi configurado")
     destino = normalizar_email(d.destino) if d.metodo == "email" else normalizar_telefone(d.destino)
     if not destino:
         msg = "E-mail inválido" if d.metodo == "email" else "Celular inválido: use DDD + número (ex.: 11 98765-4321)"

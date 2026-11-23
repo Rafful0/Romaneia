@@ -29,7 +29,7 @@ def test_cadastro_por_email_cria_empresa_e_admin():
     assert r.status_code == 201, r.text
     assert r.json() == {**r.json(), "nome": "Dona Maria", "papel": "admin", "empresa": "Padaria da Maria"}
     assert cli.get("/api/auth/me").json()["empresa"] == "Padaria da Maria"  # já entra logado
-    assert cli.get("/api/clientes").json()["total"] == 0  # empresa nova, vazia
+    assert cli.get("/api/fornecedores").json()["total"] == 0  # empresa nova, vazia
     acoes = {a["acao"] for a in cli.get("/api/auditoria").json()["items"]}
     assert "criar_conta" in acoes
     # depois entra pela tela de login normalmente
@@ -106,12 +106,12 @@ def test_codigo_nao_fica_em_texto_puro(owner):
 
 
 def test_empresas_criadas_pelo_cadastro_sao_isoladas(admin_a):
-    admin_a.post("/api/clientes", json={"nome": "Cliente da A"})
+    admin_a.post("/api/fornecedores", json={"nome": "Fornecedor da A", "telefone": "11988887777"})
     cli = TestClient(app)
     p = iniciar(cli).json()
     cli.post("/api/auth/cadastro/confirmar", json={"cadastro_id": p["cadastro_id"], "codigo": p["codigo_dev"]})
-    assert cli.get("/api/clientes").json()["total"] == 0
-    assert admin_a.get("/api/clientes").json()["total"] == 1
+    assert cli.get("/api/fornecedores").json()["total"] == 0
+    assert admin_a.get("/api/fornecedores").json()["total"] == 1
 
 
 # ---------- Google (troca de código simulada) ----------
@@ -189,10 +189,12 @@ def test_google_nao_vincula_conta_de_senha_existente(google, emp_a, owner):
     assert TestClient(app).post("/api/auth/login", json={"login": "admin@a.test", "senha": SENHA}).status_code == 200
 
 
-def test_cadastro_por_codigo_recusado_fora_do_modo_dev(monkeypatch):
+def test_cadastro_por_codigo_recusado_fora_do_modo_dev(monkeypatch, emp_a):
     monkeypatch.setattr(settings, "verificacao_modo", "desativado")
     r = iniciar(TestClient(app))
     assert r.status_code == 501 and "codigo_dev" not in r.text
+    # conta existente recebe a mesma resposta: com o cadastro desligado não dá para descobrir quem tem conta
+    assert iniciar(TestClient(app), destino="admin@a.test").status_code == 501
 
 
 @pytest.mark.parametrize("estrago", [

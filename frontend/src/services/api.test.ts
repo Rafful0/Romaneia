@@ -29,7 +29,7 @@ describe('api', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(resposta(401, { erro: { codigo: 'sessao_expirada', mensagem: 'expirou' } }))
     const ouvinte = vi.fn()
     window.addEventListener(EVENTO_401, ouvinte)
-    await api.clientes.listar({}).catch(() => {})
+    await api.fornecedores.listar({}).catch(() => {})
     await api.auth.login('a@b.c', 'x').catch(() => {})
     window.removeEventListener(EVENTO_401, ouvinte)
     expect(ouvinte).toHaveBeenCalledTimes(1)

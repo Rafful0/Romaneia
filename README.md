@@ -1,8 +1,8 @@
 # Romaneia — protótipo funcional
 
-Sistema para distribuidoras organizarem **pedidos → rotas → romaneios de separação**. Um funcionário faz, pela interface,
-o fluxo completo: login → cliente → produtos → pedido → confirmação → rota → romaneio → separação → histórico,
-com tudo gravado no PostgreSQL.
+Sistema para organizar **pedidos a fornecedores → rotas → romaneios de separação**. A empresa cria a própria conta e faz,
+pela interface, o fluxo completo: criar conta → fornecedores → produtos → pedido → confirmação → envio pelo WhatsApp →
+rota → romaneio → separação → histórico, com tudo gravado no PostgreSQL.
 
 > **Protótipo**, não produto final. Veja [O que funciona e o que não funciona](#o-que-funciona-e-o-que-não-funciona).
 
@@ -28,17 +28,8 @@ docker compose up --build
 - API: http://localhost:8000/api (health check: `/api/health`)
 - PostgreSQL: `localhost:5432`
 
-Na subida, o backend roda `alembic upgrade head` e o seed de demonstração (`RUN_SEED=true`).
-Para recomeçar do zero: `docker compose down -v`.
-
-### Credenciais de demonstração (seed)
-
-Dados **fictícios**, criados por `backend/app/seed.py` na empresa "Distribuidora Demonstração (dados fictícios)":
-
-| Usuário | Papel | Senha |
-|---|---|---|
-| `admin@demo.test` | admin | valor de `SEED_PASSWORD` (padrão `demo1234`) |
-| `operador@demo.test` | operador | idem |
+Na subida, o backend roda `alembic upgrade head`. **Não há dados de demonstração**: o banco começa vazio e o primeiro
+acesso é pelo **Criar conta** (abaixo). Para apagar tudo e recomeçar do zero: `docker compose down -v`.
 
 ### Criar conta (cadastro self-service)
 
@@ -64,7 +55,7 @@ Depois, o login aceita e-mail **ou** celular (em qualquer formato: `(11) 98765-4
 3. Coloque `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` e rode `docker compose up -d`.
    O botão "Entrar com Google" aparece sozinho (o frontend consulta `/api/auth/provedores`).
 
-Troque `SEED_PASSWORD`, `JWT_SECRET`, `POSTGRES_PASSWORD` e `APP_DB_PASSWORD` em qualquer ambiente que não seja a sua máquina.
+Troque `JWT_SECRET`, `POSTGRES_PASSWORD` e `APP_DB_PASSWORD` em qualquer ambiente que não seja a sua máquina.
 
 ### Desenvolvimento sem rebuild
 
@@ -74,7 +65,7 @@ cd frontend && npm install && npm run dev        # http://localhost:5173 (proxy 
 ```
 
 Backend local (fora do Docker): `cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt`,
-copie `backend/.env.example` para `backend/.env`, rode `alembic upgrade head`, `python -m app.seed` e `uvicorn app.main:app --reload`.
+copie `backend/.env.example` para `backend/.env`, rode `alembic upgrade head` e `uvicorn app.main:app --reload`.
 
 ## Como testar
 
@@ -101,7 +92,7 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 ### Multiempresa e segurança
 - Toda tabela de negócio tem `empresa_id`, **RLS habilitado e forçado** (`FORCE ROW LEVEL SECURITY`) e política
   `empresa_id = current_setting('app.empresa_id')`.
-- A API conecta com o papel `romaneia_app` (sem `SUPERUSER`/`BYPASSRLS`). Migrações e seed usam o dono do esquema.
+- A API conecta com o papel `romaneia_app` (sem `SUPERUSER`/`BYPASSRLS`). Migrações usam o dono do esquema.
 - Cada requisição abre **uma transação** e fixa a empresa com `set_config(..., true)` (vale só nessa transação).
 - A empresa vem **sempre do token**; corpos com campos extras (ex.: `empresa_id`) são rejeitados (`extra="forbid"`).
   O papel é relido do banco a cada requisição, então rebaixar ou inativar um usuário vale na hora.
@@ -122,36 +113,33 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 - **Versão do romaneio**: alterar, cancelar, confirmar, incluir ou remover pedido de uma rota com romaneio ativo marca o
   romaneio como **desatualizado**, que bloqueia a separação até que uma nova versão seja gerada (a anterior fica "substituída").
   Se a separação já começou, essas alterações são **recusadas (409)**, para não invalidar trabalho físico em andamento.
-- **Tipo de comércio** (padaria, restaurante, mercado...) é cadastrado por empresa e atribuído ao **cliente**. A leitura
-  "O que pedem" mostra os produtos mais pedidos por clientes de cada tipo, por **produto + unidade**, no período escolhido
-  (pedidos cancelados e itens sem produto identificado ficam de fora). No formulário de pedido, ao escolher um cliente
-  classificado, os produtos mais pedidos pelo tipo dele aparecem como sugestões de um clique.
-- **WhatsApp (link wa.me)**: no pedido, o botão "Enviar no WhatsApp" abre o WhatsApp do funcionário com a mensagem do
-  pedido pronta para o telefone do cliente (DDI 55 adicionado; número inválido desabilita o botão). O envio é manual,
-  então o sistema não registra se a mensagem foi de fato enviada.
 - **Fornecedores**: cada empresa cadastra os números de WhatsApp de quem fornece para ela (nome, número, observação).
   O número é normalizado (DDI 55) e não pode repetir na mesma empresa; a lista abre a conversa no WhatsApp (wa.me).
+- **Pedido é feito a um fornecedor** (ativo, da própria empresa).
+- **WhatsApp (link wa.me)**: no pedido, o botão "Enviar no WhatsApp" abre o WhatsApp do usuário com o pedido pronto para
+  o número do fornecedor ("Segue o pedido #N da <empresa>", entrega, itens e observação; cancelado avisa com o motivo).
+  O envio é manual, então o sistema não registra se a mensagem foi de fato enviada.
 - **Separação** com controle otimista por item (`versao`): marcar/desmarcar com versão antiga retorna 409 informando
   quem marcou. Ninguém sobrescreve em silêncio o que outra pessoa fez.
 
 ### Papéis
-- **admin**: tudo, mais inativar clientes, produtos e tipos de comércio e ver o histórico (auditoria).
-- **operador**: cadastros (incluindo tipos de comércio), pedidos, rotas, romaneios e separação.
+- **admin**: tudo, mais inativar fornecedores e produtos e ver o histórico (auditoria). Quem cria a conta é admin.
+- **operador**: cadastros, pedidos, rotas, romaneios e separação.
 
 ### API (prefixo `/api`)
-`auth/login|logout|me|provedores`, `auth/cadastro/iniciar|confirmar`, `auth/cadastro/google`, `auth/google/iniciar|retorno`, `fornecedores`, `clientes`, `tipos-comercio` (+ `/{id}/leitura?dias=`), `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
+`auth/login|logout|me|provedores`, `auth/cadastro/iniciar|confirmar`, `auth/cadastro/google`, `auth/google/iniciar|retorno`, `fornecedores`, `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
 `/romaneios`), `romaneios` (+ `/itens/{id}/separacao`), `dashboard`, `usuarios`, `auditoria`, `health`.
 Listas paginadas: `?page=&page_size=` → `{items, total, page, page_size}`.
 Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa em http://localhost:8000/docs.
 
 ## O que funciona e o que não funciona
 
-**Funciona e tem teste automatizado:** login/logout/sessão expirada, rotas privadas, dashboard, clientes, produtos
-(código único, apelidos), pedidos (itens múltiplos, filtros, confirmar, cancelar com justificativa, edição com revisão),
-rotas (incluir/remover, pedidos sem rota), romaneios (geração, visão por produto/cliente/pedidos de origem, versões),
-separação (responsável, horário, %, conflito entre usuários), histórico com filtro por período e usuário, isolamento entre empresas,
-tipos de comércio (cadastro, leitura do que cada tipo pede, sugestão no pedido), link de WhatsApp do pedido,
-criação de conta por e-mail e celular (com código simulado), login por e-mail ou celular e fornecedores.
+**Funciona e tem teste automatizado:** criação de conta por e-mail e celular (com código simulado), login por e-mail
+ou celular, logout/sessão expirada, rotas privadas, dashboard, fornecedores, produtos (código único, apelidos),
+pedidos a fornecedores (itens múltiplos, filtros, confirmar, cancelar com justificativa, edição com revisão), link de
+WhatsApp do pedido para o fornecedor, rotas (incluir/remover, pedidos sem rota), romaneios (geração, visão por
+produto/fornecedor/pedidos de origem, versões), separação (responsável, horário, %, conflito entre usuários), histórico
+com filtro por período e usuário, isolamento entre empresas.
 
 **Parcial / não verificado:**
 - Login com Google: o fluxo completo (PKCE, state, nonce, conferência do id_token, vínculo e conta nova) tem testes
@@ -159,12 +147,11 @@ criação de conta por e-mail e celular (com código simulado), login por e-mail
 - Código de verificação do cadastro: simulado (aparece na tela e no log); não há envio real de e-mail/SMS.
 - Impressão do romaneio: há CSS de `@media print` (esconde menu e botões, fundo branco), mas a saída impressa não foi conferida.
 - Responsivo: pensado para notebook; em tablet o menu lateral só estreita. Não há layout mobile.
-- O formulário de pedido carrega até 100 clientes/produtos ativos num `<select>` (sem busca incremental).
+- O formulário de pedido carrega até 100 fornecedores/produtos ativos num `<select>` (sem busca incremental).
 
 **Não implementado (fora do escopo deste protótipo):**
-- Gestão de usuários pela interface (convidar funcionários para a empresa); recuperação de senha; reativar cliente/produto inativado.
-- Uso dos fornecedores além do cadastro (ex.: mandar a lista de compras pelo WhatsApp).
+- Gestão de usuários pela interface (convidar funcionários para a empresa); recuperação de senha; reativar fornecedor/produto inativado.
 - Revogação de token no logout (o JWT vale até expirar se tiver sido copiado), limite de tentativas de login, token CSRF
   (a proteção atual é `SameSite=Lax` + CORS restrito + JSON).
-- Envio automático de WhatsApp (API oficial da Meta), confirmação de entrega/leitura e opt-in do cliente.
+- Envio automático de WhatsApp (API oficial da Meta), confirmação de entrega/leitura.
 - IA, otimização de rotas, LGPD completa, estimativa de custos, deploy em produção.

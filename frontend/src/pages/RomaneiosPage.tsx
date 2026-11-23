@@ -26,7 +26,7 @@ export function RomaneiosPage() {
           <>
             <Table head={['Rota', 'Data', 'Versão', 'Status', <Num>Pedidos</Num>, <Num>Separação</Num>, 'Gerado em']}>
               {d.items.map((r) => (
-                <tr key={r.id} className="hover:bg-surface-2">
+                <tr key={r.id} className="hover:bg-white/[0.05]">
                   <Td><Link to={`/romaneios/${r.id}`} className="font-medium hover:text-brand">{r.rota_nome}</Link></Td>
                   <Td>{data(r.rota_data)}</Td>
                   <Td className="font-mono text-xs text-ink-2">v{r.versao}</Td>

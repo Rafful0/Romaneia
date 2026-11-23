@@ -42,13 +42,13 @@ export function SeparacaoPage() {
                 <span className="text-ink-2">{r.progresso.separados} de {r.progresso.total} itens separados</span>
                 <span className="text-2xl font-semibold tracking-[-0.02em]" data-testid="percentual">{r.progresso.percentual}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-sm bg-surface-2" role="progressbar" aria-valuenow={r.progresso.percentual} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={r.progresso.percentual} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${r.progresso.percentual}%` }} />
               </div>
             </Card>
             {/* Lista de conferência: quantidade primeiro ("10 cx Farinha", como o pedido é falado);
                 item feito ganha trilho verde e esmaece para cinza legível (sem opacidade). */}
-            <ul className="divide-y divide-line overflow-hidden rounded-md border border-line bg-surface">
+            <ul className="divide-y divide-white/[0.07] overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] shadow-xl shadow-black/25 backdrop-blur-xl">
               {r.itens.map((it) => {
                 const feito = !!it.separado_em
                 const enviando = m.isPending && m.variables?.id === it.id

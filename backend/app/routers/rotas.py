@@ -31,10 +31,10 @@ def obter(rid: UUID, c: Ctx = Depends(ctx)):
     r = c.um(f"{RESUMO} where r.id = :id", id=rid)
     if not r:
         raise nao_encontrado("Rota")
-    pedidos = c.todos("""select p.id, p.numero, cl.nome cliente_nome, p.status, p.data_entrega,
+    pedidos = c.todos("""select p.id, p.numero, fo.nome fornecedor_nome, p.status, p.data_entrega,
         (select count(*) from pedido_itens i where i.pedido_id = p.id) qtd_itens,
         (select count(*) from pedido_itens i where i.pedido_id = p.id and i.produto_id is null) nao_identificados
-        from pedidos p join clientes cl on cl.id = p.cliente_id where p.rota_id = :id order by p.numero""", id=rid)
+        from pedidos p join fornecedores fo on fo.id = p.fornecedor_id where p.rota_id = :id order by p.numero""", id=rid)
     romaneios = c.todos("select id, versao, status, gerado_em from romaneios where rota_id = :id "
                         "order by versao desc", id=rid)
     return {**dict(r), "pedidos": pedidos, "romaneios": romaneios}

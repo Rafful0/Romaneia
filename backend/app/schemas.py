@@ -43,18 +43,6 @@ class FornecedorIn(Base):
     observacao: TextoOpc = None
 
 
-class ClienteIn(Base):
-    nome: Texto
-    documento: TextoOpc = None
-    telefone: TextoOpc = None
-    endereco: TextoOpc = None
-    tipo_comercio_id: UUID | None = None
-
-
-class TipoComercioIn(Base):
-    nome: Texto
-
-
 class ProdutoIn(Base):
     codigo: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
     nome: Texto
@@ -71,7 +59,7 @@ class ItemIn(Base):
 
 
 class PedidoIn(Base):
-    cliente_id: UUID
+    fornecedor_id: UUID
     data_entrega: date
     observacao: TextoOpc = None
     itens: list[ItemIn] = Field(min_length=1, max_length=200)

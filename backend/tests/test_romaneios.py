@@ -1,10 +1,10 @@
 import pytest
 
-from tests.conftest import nova_rota, novo_cliente, novo_pedido, novo_produto
+from tests.conftest import nova_rota, novo_fornecedor, novo_pedido, novo_produto
 
 
-def confirmado(cli, cliente, itens):
-    p = novo_pedido(cli, cliente, itens).json()
+def confirmado(cli, fornecedor, itens):
+    p = novo_pedido(cli, fornecedor, itens).json()
     assert cli.post(f"/api/pedidos/{p['id']}/confirmar").status_code == 200
     return p
 
@@ -12,7 +12,7 @@ def confirmado(cli, cliente, itens):
 @pytest.fixture()
 def cenario(admin_a):
     cli = admin_a
-    c1, c2 = novo_cliente(cli, "Alfa")["id"], novo_cliente(cli, "Beta")["id"]
+    c1, c2 = novo_fornecedor(cli, "Alfa")["id"], novo_fornecedor(cli, "Beta")["id"]
     arroz = novo_produto(cli, "ARR", "cx", "Arroz")["id"]
     p1 = confirmado(cli, c1, [{"produto_id": arroz, "quantidade": 10, "unidade": "cx"}])
     p2 = confirmado(cli, c2, [{"produto_id": arroz, "quantidade": 10, "unidade": "kg"},
@@ -36,7 +36,7 @@ def test_consolidacao_por_produto_e_unidade(cenario):
     assert linhas == {("ARR", "cx"): "15.000", ("ARR", "kg"): "10.000"}  # 10 cx e 10 kg nunca somam
     assert rom["pendentes_ignorados"] == 1
     assert len(rom["pedidos"]) == 2
-    assert [g["cliente_nome"] for g in rom["por_cliente"]] == ["Alfa", "Beta"]
+    assert [g["fornecedor_nome"] for g in rom["por_fornecedor"]] == ["Alfa", "Beta"]
     assert rom["versao"] == 1 and rom["status"] == "ativo"
 
 
@@ -57,7 +57,7 @@ def test_alterar_pedido_invalida_romaneio(cenario):
     cli = cenario["cli"]
     rom = gerar(cenario)
     r = cli.put(f"/api/pedidos/{cenario['p1']['id']}", json={
-        "cliente_id": cenario["c1"], "data_entrega": "2026-12-01",
+        "fornecedor_id": cenario["c1"], "data_entrega": "2026-12-01",
         "itens": [{"produto_id": cenario["arroz"], "quantidade": 12, "unidade": "cx"}]})
     assert r.status_code == 200
     atual = cli.get(f"/api/romaneios/{rom['id']}").json()
@@ -85,7 +85,7 @@ def test_outras_mudancas_invalidam(cenario, acao):
         r = cli.post(f"/api/rotas/{rota}/pedidos", json={"pedido_id": p["id"]})
     else:
         cli.put(f"/api/pedidos/{cenario['pend']['id']}", json={
-            "cliente_id": cenario["c1"], "data_entrega": "2026-12-01",
+            "fornecedor_id": cenario["c1"], "data_entrega": "2026-12-01",
             "itens": [{"produto_id": cenario["arroz"], "quantidade": 1, "unidade": "cx"}]})
         r = cli.post(f"/api/pedidos/{cenario['pend']['id']}/confirmar")
     assert r.status_code == 200, r.text

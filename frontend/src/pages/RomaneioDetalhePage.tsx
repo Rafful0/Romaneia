@@ -5,7 +5,7 @@ import { ButtonLink, Button, Card, Num, PageHeader, Qtd, QueryState, StatusPedid
 import { data, dataHora, qtd } from '../lib/format'
 import { api } from '../services/api'
 
-const ABAS = [['produto', 'Por produto'], ['cliente', 'Por cliente'], ['pedidos', 'Pedidos de origem']] as const
+const ABAS = [['produto', 'Por produto'], ['fornecedor', 'Por fornecedor'], ['pedidos', 'Pedidos de origem']] as const
 
 export function RomaneioDetalhePage() {
   const { id } = useParams()
@@ -31,7 +31,7 @@ export function RomaneioDetalhePage() {
           {r.status === 'substituido' && <p className="no-print mb-4 text-sm text-muted">Esta versão foi substituída por uma mais recente.</p>}
           <div className="mb-4 text-sm text-ink-2">Separação: {r.progresso.separados}/{r.progresso.total} itens ({r.progresso.percentual}%)</div>
 
-          <div role="tablist" className="no-print mb-4 flex gap-4 border-b border-line">
+          <div role="tablist" className="no-print mb-4 flex gap-4 border-b border-white/10">
             {ABAS.map(([k, rot]) => (
               <button key={k} role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
                 className={'-mb-px border-b-2 py-2 text-sm font-medium transition-colors ' + (aba === k ? 'border-brand text-ink' : 'border-transparent text-muted hover:text-ink')}>
@@ -47,21 +47,21 @@ export function RomaneioDetalhePage() {
                   <Td className="whitespace-nowrap font-mono text-xs text-ink-2">{i.produto_codigo}</Td>
                   <Td className="font-medium">{i.produto_nome}</Td>
                   <Td className="pr-6 text-right text-base"><Qtd v={qtd(i.quantidade_total)} un={i.unidade} /></Td>
-                  <Td className="text-xs text-muted">{i.origens.map((o) => `#${o.pedido_numero} ${o.cliente_nome}: ${qtd(o.quantidade)}`).join(' · ')}</Td>
+                  <Td className="text-xs text-muted">{i.origens.map((o) => `#${o.pedido_numero} ${o.fornecedor_nome}: ${qtd(o.quantidade)}`).join(' · ')}</Td>
                   <Td className={'whitespace-nowrap ' + (i.separado_em ? 'text-brand' : 'text-muted')}>{i.separado_em ? `✓ ${i.separado_por_nome}` : '☐'}</Td>
                 </tr>
               ))}
             </Table>
           )}
-          {aba === 'cliente' && (
+          {aba === 'fornecedor' && (
             <div className="grid gap-3 md:grid-cols-2">
-              {r.por_cliente.map((c) => (
-                <Card key={c.cliente_id} className="p-0!">
-                  <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
-                    <h3 className="font-semibold">{c.cliente_nome}</h3>
+              {r.por_fornecedor.map((c) => (
+                <Card key={c.fornecedor_id} className="p-0!">
+                  <div className="flex items-baseline justify-between gap-3 border-b border-white/10 px-4 py-2.5">
+                    <h3 className="font-semibold">{c.fornecedor_nome}</h3>
                     <span className="font-mono text-xs text-muted">{c.pedidos.map((n) => `#${n}`).join(', ')}</span>
                   </div>
-                  <ul className="divide-y divide-line px-4 text-sm">
+                  <ul className="divide-y divide-white/[0.07] px-4 text-sm">
                     {c.itens.map((i, n) => (
                       <li key={n} className="flex items-baseline justify-between gap-3 py-1.5">
                         <span>{i.produto_nome}</span><Qtd v={qtd(i.quantidade)} un={i.unidade} />
@@ -73,11 +73,11 @@ export function RomaneioDetalhePage() {
             </div>
           )}
           {aba === 'pedidos' && (
-            <Table head={['Nº', 'Cliente', 'Status atual', 'Revisão no romaneio']}>
+            <Table head={['Nº', 'Fornecedor', 'Status atual', 'Revisão no romaneio']}>
               {r.pedidos.map((p) => (
                 <tr key={p.id}>
                   <Td><Link to={`/pedidos/${p.id}`} className="font-mono hover:text-brand">#{p.numero}</Link></Td>
-                  <Td>{p.cliente_nome}</Td>
+                  <Td>{p.fornecedor_nome}</Td>
                   <Td><StatusPedidoBadge s={p.status} /></Td>
                   <Td>{p.pedido_revisao}{p.revisao_atual !== p.pedido_revisao && <span className="ml-2 text-warn">(atual: {p.revisao_atual})</span>}</Td>
                 </tr>

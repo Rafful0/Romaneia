@@ -1,51 +1,59 @@
 import { expect, test, type Page } from '@playwright/test'
 
-// Fluxo completo pela interface, com a API e o PostgreSQL reais:
-// login → cliente → produtos → pedido → confirmação → rota → romaneio → separação → histórico,
+// Fluxo completo pela interface, com a API e o PostgreSQL reais (sem dados de demonstração):
+// criar conta → login → fornecedor → produtos → pedido → confirmação → WhatsApp → rota → romaneio → separação → histórico,
 // recarregando páginas para provar que os dados persistem.
-const SENHA = process.env.SEED_PASSWORD ?? 'demo1234'
 const ts = Date.now().toString().slice(-7)
-const CLIENTE = `E2E Mercado ${ts}`
+const SENHA = 'senha-e2e-123'
+const NOME = `Ana E2E ${ts}`
+const EMAIL = `ana.${ts}@e2e.test`
+const EMPRESA = `Padaria E2E ${ts}`
+const FORNECEDOR = `E2E Moinho ${ts}`
 const P1 = { codigo: `E2E${ts}A`, nome: `E2E Farinha ${ts}`, un: 'cx' }
 const P2 = { codigo: `E2E${ts}B`, nome: `E2E Tomate ${ts}`, un: 'kg' }
 const ROTA = `E2E Rota ${ts}`
-const TIPO = `E2E Padaria ${ts}`
 
 async function toast(page: Page, texto: string | RegExp) {
   await expect(page.getByRole('status').filter({ hasText: texto }).last()).toBeVisible()
 }
 
-test('fluxo completo do funcionário, com persistência após recarregar', async ({ page }) => {
-  // 1. Rota privada redireciona para o login
+test('fluxo completo do usuário, com persistência após recarregar', async ({ page }) => {
+  // 1. Conta nova pelo cadastro (o banco não tem demonstração)
+  await page.goto('/cadastro')
+  await page.getByLabel('Seu nome').fill(NOME)
+  await page.getByLabel('Nome da empresa').fill(EMPRESA)
+  await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(EMAIL)
+  await page.getByLabel('Senha (mín. 8 caracteres)').fill(SENHA)
+  await page.getByLabel('Confirmar senha').fill(SENHA)
+  await page.getByRole('button', { name: 'Continuar' }).click()
+  const codigo = (await page.getByTestId('codigo-dev').textContent())!.trim()
+  await page.getByLabel('Código').fill(codigo)
+  await page.getByRole('button', { name: 'Confirmar e criar conta' }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await page.getByRole('button', { name: 'Sair' }).click()
+
+  // 2. Rota privada redireciona para o login; erro primeiro, depois sucesso e volta para onde tentou ir
   await page.goto('/pedidos')
   await expect(page).toHaveURL(/\/login$/)
-
-  // 2. Login (erro primeiro, depois sucesso)
-  await page.getByLabel('E-mail ou celular').fill('admin@demo.test')
+  await page.getByLabel('E-mail ou celular').fill(EMAIL)
   await page.getByLabel('Senha').fill('senha-errada')
   await page.getByRole('button', { name: 'Entrar' }).click()
   await expect(page.getByRole('alert')).toContainText('E-mail/celular ou senha incorretos')
   await page.getByLabel('Senha').fill(SENHA)
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await expect(page).toHaveURL(/\/pedidos$/) // volta para onde tentou ir
+  await expect(page).toHaveURL(/\/pedidos$/)
   await expect(page.getByRole('heading', { name: 'Pedidos' })).toBeVisible()
 
-  // 3. Tipo de comércio + cliente classificado
-  await page.getByRole('link', { name: 'Tipos de comércio' }).click()
-  await page.getByRole('button', { name: 'Novo tipo' }).first().click()
-  await page.getByRole('dialog').getByLabel('Nome *').fill(TIPO)
-  await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
-  await toast(page, 'Tipo de comércio criado')
-  await page.getByRole('link', { name: 'Clientes', exact: true }).click()
-  await page.getByRole('button', { name: 'Novo cliente' }).first().click()
+  // 3. Fornecedor com WhatsApp
+  await page.getByRole('link', { name: 'Fornecedores' }).click()
+  await page.getByRole('button', { name: 'Novo fornecedor' }).first().click()
   await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Informe o nome')).toBeVisible()
-  await page.getByLabel('Nome *').fill(CLIENTE)
-  await page.getByLabel('Telefone').fill('(11) 90000-0000')
-  await page.getByRole('dialog').getByLabel('Tipo de comércio').selectOption({ label: TIPO })
+  await page.getByRole('dialog').getByLabel('Nome *').fill(FORNECEDOR)
+  await page.getByRole('dialog').getByLabel('Número do WhatsApp *').fill('(11) 90000-0000')
   await page.getByRole('dialog').getByRole('button', { name: 'Salvar' }).click()
-  await toast(page, 'Cliente criado')
-  await expect(page.getByRole('cell', { name: CLIENTE })).toBeVisible()
+  await toast(page, 'Fornecedor cadastrado')
+  await expect(page.getByRole('cell', { name: FORNECEDOR, exact: true })).toBeVisible()
 
   // 4. Produtos (unidades diferentes; apelido pesquisável)
   await page.getByRole('link', { name: 'Produtos' }).click()
@@ -71,10 +79,10 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await expect(page.getByRole('alert').filter({ hasText: 'Já existe produto com o código' })).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click()
 
-  // 5. Pedido com 3 itens: 10 cx e 10 kg do MESMO produto + 2,5 kg de outro
-  await page.getByRole('link', { name: 'Pedidos' }).click()
+  // 5. Pedido ao fornecedor com 3 itens: 10 cx e 10 kg do MESMO produto + 2,5 kg de outro
+  await page.getByRole('link', { name: 'Pedidos', exact: true }).click()
   await page.getByRole('link', { name: 'Novo pedido' }).first().click()
-  await page.getByLabel('Cliente *').selectOption({ label: CLIENTE })
+  await page.getByLabel('Fornecedor *').selectOption({ label: FORNECEDOR })
   const itens = page.getByTestId('item-pedido')
   const preencher = async (n: number, prod: typeof P1, qtd: string, un?: string) => {
     const it = itens.nth(n)
@@ -97,36 +105,17 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   const pedidoId = pedidoUrl.split('/').pop()!
   const numero = (await page.getByRole('heading', { level: 1 }).textContent())!.replace(/\D/g, '')
 
-  // 6. Confirmação
+  // 6. Confirmação + WhatsApp para o fornecedor
   await page.getByRole('button', { name: 'Confirmar pedido' }).click()
   await toast(page, `Pedido #${numero} confirmado`)
   await page.reload()
   await expect(page.getByText('Confirmado').first()).toBeVisible()
-  // WhatsApp (click-to-chat): link para o telefone do cliente com a mensagem do pedido
   const wa = await page.getByRole('link', { name: 'Enviar no WhatsApp' }).getAttribute('href')
   expect(wa).toMatch(/^https:\/\/wa\.me\/5511900000000\?text=/)
   const texto = decodeURIComponent(wa!.split('text=')[1])
-  expect(texto).toContain(`Seu pedido #${numero} foi confirmado.`)
+  expect(texto).toContain(`Olá, ${FORNECEDOR}! Segue o pedido #${numero} da ${EMPRESA}.`)
   expect(texto).toContain(`- 10 cx ${P1.nome}`)
   expect(texto).toContain(`- 10 kg ${P1.nome}`)
-
-  // Leitura do tipo de comércio: o que clientes desse tipo pedem (por produto + unidade)
-  await page.getByRole('link', { name: 'Tipos de comércio' }).click()
-  await page.getByRole('row').filter({ hasText: TIPO }).getByRole('link', { name: 'O que pedem' }).click()
-  await expect(page.getByRole('heading', { name: `O que pede: ${TIPO}` })).toBeVisible()
-  const leitura = page.getByRole('row').filter({ hasText: P1.nome })
-  await expect(leitura).toHaveCount(2)
-  await expect(leitura.filter({ hasText: '10 cx' })).toContainText('1 de 1 pedidos (100%)')
-  await expect(leitura.filter({ hasText: '10 kg' })).toBeVisible()
-  await expect(page.getByRole('row').filter({ hasText: P2.nome })).toContainText('2,5 kg')
-  // Sugestão no próximo pedido do mesmo cliente
-  await page.getByRole('link', { name: 'Pedidos', exact: true }).click()
-  await page.getByRole('link', { name: 'Novo pedido' }).first().click()
-  await page.getByLabel('Cliente *').selectOption({ label: CLIENTE })
-  await expect(page.getByTestId('sugestoes')).toContainText(`Mais pedidos por clientes do tipo ${TIPO}`)
-  await page.getByRole('button', { name: `Adicionar: ${P2.nome} em kg` }).click()
-  await expect(itens.nth(0).getByRole('combobox').first()).toHaveValue(/.+/)
-  await expect(page.getByRole('button', { name: `Já adicionado: ${P2.nome} em kg` })).toBeDisabled()
 
   // 7. Rota: criar, incluir o pedido
   await page.getByRole('link', { name: 'Rotas' }).click()
@@ -138,7 +127,7 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await page.getByLabel('Pedido sem rota').selectOption(pedidoId)
   await page.getByRole('button', { name: 'Incluir', exact: true }).click()
   await toast(page, 'Pedido incluído na rota')
-  await expect(page.getByRole('row').filter({ hasText: `#${numero}` })).toContainText(CLIENTE)
+  await expect(page.getByRole('row').filter({ hasText: `#${numero}` })).toContainText(FORNECEDOR)
 
   // 8. Romaneio: consolidação por produto + unidade
   await page.getByRole('button', { name: 'Gerar romaneio' }).click()
@@ -149,8 +138,8 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await expect(linhas.filter({ hasText: '10 cx' })).toHaveCount(1)
   await expect(linhas.filter({ hasText: '10 kg' })).toHaveCount(1)
   await expect(page.getByRole('row').filter({ hasText: P2.nome })).toContainText('2,5 kg')
-  await page.getByRole('tab', { name: 'Por cliente' }).click()
-  await expect(page.getByRole('heading', { name: CLIENTE })).toBeVisible()
+  await page.getByRole('tab', { name: 'Por fornecedor' }).click()
+  await expect(page.getByRole('heading', { name: FORNECEDOR })).toBeVisible()
   await page.getByRole('tab', { name: 'Pedidos de origem' }).click()
   await expect(page.getByRole('row').filter({ hasText: `#${numero}` })).toBeVisible()
   const romaneioUrl = page.url()
@@ -164,12 +153,12 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   }
   await expect(page.getByTestId('percentual')).toHaveText('100%')
   await toast(page, 'Separação concluída!')
-  await expect(page.getByText(/Separado por Ana Admin \(demo\) em/).first()).toBeVisible()
+  await expect(page.getByText(`Separado por ${NOME} em`).first()).toBeVisible()
 
   // 10. Persistência: recarregar tudo
   await page.reload()
   await expect(page.getByTestId('percentual')).toHaveText('100%')
-  await expect(page.getByText(/Separado por Ana Admin \(demo\)/)).toHaveCount(3)
+  await expect(page.getByText(`Separado por ${NOME}`)).toHaveCount(3)
   await page.goto(romaneioUrl)
   await expect(page.getByText('Concluído').first()).toBeVisible()
   await page.goto(pedidoUrl)
@@ -178,12 +167,11 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
 
   // 11. Histórico (auditoria real) com filtro por usuário
   await page.getByRole('link', { name: 'Histórico' }).click()
-  await page.getByLabel('Usuário').selectOption({ label: 'Ana Admin (demo)' })
-  for (const txt of [`confirmou pedido #${numero}`, `criou pedido #${numero}`, 'gerou romaneio', 'concluiu romaneio', `criou cliente ${CLIENTE}`]) {
+  await page.getByLabel('Usuário').selectOption({ label: NOME })
+  for (const txt of [`confirmou pedido #${numero}`, `criou pedido #${numero}`, 'gerou romaneio', 'concluiu romaneio',
+    `criou fornecedor ${FORNECEDOR}`, 'criou a conta']) {
     await expect(page.getByRole('cell', { name: txt }).first()).toBeVisible()
   }
-  await page.getByLabel('Usuário').selectOption({ label: 'Otávio Operador (demo)' })
-  await expect(page.getByRole('cell', { name: `criou pedido #${numero}` })).toHaveCount(0)
 
   // 12. Dashboard reflete o banco; logout protege as rotas
   await page.getByRole('link', { name: 'Dashboard' }).click()

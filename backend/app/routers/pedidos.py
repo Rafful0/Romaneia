@@ -12,12 +12,12 @@ from app.schemas import CancelarIn, PedidoIn
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 STATUS = set(domain.TRANSICOES)
 
-SELECT = """select p.id, p.numero, p.cliente_id, cl.nome cliente_nome, cl.telefone cliente_telefone, p.rota_id, r.nome rota_nome, r.data rota_data,
+SELECT = """select p.id, p.numero, p.fornecedor_id, fo.nome fornecedor_nome, fo.telefone fornecedor_telefone, p.rota_id, r.nome rota_nome, r.data rota_data,
   p.data_entrega, p.status, p.observacao, p.motivo_cancelamento, p.revisao, p.criado_em, p.atualizado_em,
   u.nome criado_por_nome,
   (select count(*) from pedido_itens i where i.pedido_id = p.id) qtd_itens,
   (select count(*) from pedido_itens i where i.pedido_id = p.id and i.produto_id is null) nao_identificados
-from pedidos p join clientes cl on cl.id = p.cliente_id left join rotas r on r.id = p.rota_id
+from pedidos p join fornecedores fo on fo.id = p.fornecedor_id left join rotas r on r.id = p.rota_id
 join usuarios u on u.id = p.criado_por"""
 
 
@@ -52,16 +52,16 @@ def _gravar_itens(c: Ctx, pid, d: PedidoIn, produtos_anteriores: set = frozenset
             t=it.texto_original, q=it.quantidade, u=it.unidade)
 
 
-def _cliente_ativo(c: Ctx, cliente_id) -> None:
-    cl = c.um("select ativo from clientes where id = :id", id=cliente_id)
-    if not cl:
-        raise AppError(422, "cliente_invalido", "Cliente não encontrado", {"campo": "cliente_id"})
-    if not cl["ativo"]:
-        raise AppError(422, "cliente_inativo", "Cliente inativo", {"campo": "cliente_id"})
+def _fornecedor_ativo(c: Ctx, fornecedor_id) -> None:
+    fo = c.um("select ativo from fornecedores where id = :id", id=fornecedor_id)
+    if not fo:  # inclui fornecedor de outra empresa (invisível pelo RLS)
+        raise AppError(422, "fornecedor_invalido", "Fornecedor não encontrado", {"campo": "fornecedor_id"})
+    if not fo["ativo"]:
+        raise AppError(422, "fornecedor_inativo", "Fornecedor inativo", {"campo": "fornecedor_id"})
 
 
 def _travar(c: Ctx, pid) -> dict:
-    p = c.um("select id, numero, status, rota_id, cliente_id from pedidos where id = :id for update", id=pid)
+    p = c.um("select id, numero, status, rota_id, fornecedor_id from pedidos where id = :id for update", id=pid)
     if not p:
         raise nao_encontrado("Pedido")
     return dict(p)
@@ -75,9 +75,9 @@ def listar(status: str | None = None, de: date | None = None, ate: date | None =
     filtro = """(cast(:st as text) is null or p.status = :st)
       and (cast(:de as date) is null or p.data_entrega >= :de) and (cast(:ate as date) is null or p.data_entrega <= :ate)
       and (not :sr or (p.rota_id is null and p.status in ('pendente','confirmado')))
-      and (:b = '' or cl.nome ilike '%' || :b || '%' or p.numero::text = :b)"""
+      and (:b = '' or fo.nome ilike '%' || :b || '%' or p.numero::text = :b)"""
     prm = {"st": status, "de": de, "ate": ate, "sr": sem_rota, "b": busca.strip()}
-    total = c.q(f"select count(*) from pedidos p join clientes cl on cl.id = p.cliente_id where {filtro}",
+    total = c.q(f"select count(*) from pedidos p join fornecedores fo on fo.id = p.fornecedor_id where {filtro}",
                 **prm).scalar()
     itens = c.todos(f"{SELECT} where {filtro} order by p.numero desc limit :lim offset :off",
                     **prm, lim=pg.page_size, off=pg.offset)
@@ -91,10 +91,10 @@ def obter(pid: UUID, c: Ctx = Depends(ctx)):
 
 @router.post("", status_code=201)
 def criar(d: PedidoIn, c: Ctx = Depends(ctx)):
-    _cliente_ativo(c, d.cliente_id)
-    pid = c.q("insert into pedidos (empresa_id, cliente_id, data_entrega, observacao, criado_por) "
+    _fornecedor_ativo(c, d.fornecedor_id)
+    pid = c.q("insert into pedidos (empresa_id, fornecedor_id, data_entrega, observacao, criado_por) "
               "values (:e, :cl, :de, :o, :u) returning id",
-              e=c.empresa_id, cl=d.cliente_id, de=d.data_entrega, o=d.observacao, u=c.usuario_id).scalar()
+              e=c.empresa_id, cl=d.fornecedor_id, de=d.data_entrega, o=d.observacao, u=c.usuario_id).scalar()
     _gravar_itens(c, pid, d)
     out = detalhe(c, pid)
     c.auditar("criar", "pedido", pid, {"numero": out["numero"], "itens": len(d.itens)})
@@ -106,15 +106,15 @@ def editar(pid: UUID, d: PedidoIn, c: Ctx = Depends(ctx)):
     p = _travar(c, pid)
     if p["status"] not in domain.EDITAVEIS:
         raise AppError(409, "pedido_nao_editavel", f"Pedido '{p['status']}' não pode ser alterado")
-    if str(d.cliente_id) != str(p["cliente_id"]):
-        _cliente_ativo(c, d.cliente_id)
+    if str(d.fornecedor_id) != str(p["fornecedor_id"]):
+        _fornecedor_ativo(c, d.fornecedor_id)
     if p["status"] == "confirmado" and any(it.produto_id is None for it in d.itens):
         raise AppError(422, "item_nao_identificado", "Pedido confirmado não pode ter item sem produto identificado")
     anteriores = {str(r["produto_id"]) for r in c.todos(
         "select produto_id from pedido_itens where pedido_id = :p and produto_id is not null", p=pid)}
     _gravar_itens(c, pid, d, anteriores)
-    c.q("update pedidos set cliente_id=:cl, data_entrega=:de, observacao=:o, revisao = revisao + 1, "
-        "atualizado_em = now() where id = :id", id=pid, cl=d.cliente_id, de=d.data_entrega, o=d.observacao)
+    c.q("update pedidos set fornecedor_id=:cl, data_entrega=:de, observacao=:o, revisao = revisao + 1, "
+        "atualizado_em = now() where id = :id", id=pid, cl=d.fornecedor_id, de=d.data_entrega, o=d.observacao)
     if p["status"] == "confirmado":
         invalidar(c, f"Pedido #{p['numero']} alterado", pedido_id=pid, rota_id=p["rota_id"])
     c.auditar("editar", "pedido", pid, {"numero": p["numero"], "itens": len(d.itens)})

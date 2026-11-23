@@ -15,34 +15,20 @@ export function PedidoFormPage() {
   const nav = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
-  // shortcut: carrega até 100 clientes/produtos ativos em <select>; trocar por busca (combobox) quando o cadastro crescer.
-  const clientes = useQuery({ queryKey: ['clientes', 'ativos'], queryFn: () => api.clientes.listar({ ativo: true, page_size: 100 }) })
+  // shortcut: carrega até 100 fornecedores/produtos ativos em <select>; trocar por busca (combobox) quando o cadastro crescer.
+  const fornecedores = useQuery({ queryKey: ['fornecedores', 'ativos'], queryFn: () => api.fornecedores.listar({ ativo: true, page_size: 100 }) })
   const produtos = useQuery({ queryKey: ['produtos', 'ativos'], queryFn: () => api.produtos.listar({ ativo: true, page_size: 100 }) })
   const pedido = useQuery({ queryKey: ['pedido', id], queryFn: () => api.pedidos.obter(id!), enabled: !!id })
 
   const f = useForm<PedidoForm, unknown, PedidoIn>({
     resolver: zodResolver(pedidoSchema),
-    defaultValues: { cliente_id: '', data_entrega: hojeISO(), observacao: '', itens: [itemVazio()] },
+    defaultValues: { fornecedor_id: '', data_entrega: hojeISO(), observacao: '', itens: [itemVazio()] },
   })
   const itens = useFieldArray({ control: f.control, name: 'itens' })
-  // Sugestão: o que clientes do mesmo tipo de comércio mais pedem (histórico real, últimos 90 dias).
-  const clienteId = f.watch('cliente_id')
-  const tipoId = clientes.data?.items.find((c) => c.id === clienteId)?.tipo_comercio_id
-  const sugestoes = useQuery({
-    queryKey: ['tipos-comercio', 'leitura', tipoId, 90], queryFn: () => api.tiposComercio.leitura(tipoId!, 90), enabled: !!tipoId,
-  })
-  const valores = f.watch('itens')
-  const jaTem = (pid: string, un: string) => valores.some((i) => i.produto_id === pid && i.unidade === un)
-  const adicionar = (pid: string, un: Unidade) => {
-    const vazio = valores.findIndex((i) => !i.produto_id && !i.texto_original && !i.quantidade)
-    if (vazio < 0) return itens.append({ produto_id: pid, texto_original: '', quantidade: '', unidade: un })
-    f.setValue(`itens.${vazio}.produto_id`, pid)
-    f.setValue(`itens.${vazio}.unidade`, un)
-  }
   useEffect(() => {
     const p = pedido.data
     if (p) f.reset({
-      cliente_id: p.cliente_id, data_entrega: p.data_entrega, observacao: p.observacao ?? '',
+      fornecedor_id: p.fornecedor_id, data_entrega: p.data_entrega, observacao: p.observacao ?? '',
       itens: p.itens.map((i) => ({ produto_id: i.produto_id ?? '', texto_original: i.texto_original ?? '', quantidade: qtd(i.quantidade), unidade: i.unidade })),
     })
   }, [pedido.data, f])
@@ -58,17 +44,16 @@ export function PedidoFormPage() {
     onError: toast.erro,
   })
 
-  const falha = [clientes, produtos, pedido].find((q) => q.isError)
+  const falha = [fornecedores, produtos, pedido].find((q) => q.isError)
   if (falha) return <ErrorState erro={falha.error} onRetry={() => falha.refetch()} />
-  if (clientes.isPending || produtos.isPending || (id && pedido.isPending)) return <div className="flex justify-center py-10"><Spinner /></div>
+  if (fornecedores.isPending || produtos.isPending || (id && pedido.isPending)) return <div className="flex justify-center py-10"><Spinner /></div>
   if (pedido.data && !['pendente', 'confirmado'].includes(pedido.data.status)) {
     return <ErrorState erro={new Error('Este pedido não pode mais ser editado.')} onRetry={() => nav(`/pedidos/${id}`)} />
   }
 
-  const listaClientes = clientes.data!.items
-  const clienteAtualFora = pedido.data && !listaClientes.some((c) => c.id === pedido.data!.cliente_id)
+  const listaFornecedores = fornecedores.data!.items
+  const fornecedorAtualFora = pedido.data && !listaFornecedores.some((c) => c.id === pedido.data!.fornecedor_id)
   const prods = produtos.data!.items
-  const sugeridos = (sugestoes.data?.itens ?? []).filter((s) => prods.some((p) => p.id === s.produto_id)).slice(0, 8)
   const e = f.formState.errors
   return (
     <>
@@ -76,12 +61,12 @@ export function PedidoFormPage() {
         sub={pedido.data?.status === 'confirmado' ? 'Pedido confirmado: alterar invalida o romaneio já gerado para a rota.' : undefined} />
       <form noValidate onSubmit={f.handleSubmit((d) => salvar.mutate(d))} className="flex flex-col gap-4">
         <Card className="grid gap-3 md:grid-cols-3">
-          <Field label="Cliente *" erro={e.cliente_id?.message}>
+          <Field label="Fornecedor *" erro={e.fornecedor_id?.message}>
             {(fid) => (
-              <Select id={fid} aria-invalid={!!e.cliente_id} {...f.register('cliente_id')}>
+              <Select id={fid} aria-invalid={!!e.fornecedor_id} {...f.register('fornecedor_id')}>
                 <option value="">Selecione…</option>
-                {clienteAtualFora && <option value={pedido.data!.cliente_id}>{pedido.data!.cliente_nome} (inativo)</option>}
-                {listaClientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                {fornecedorAtualFora && <option value={pedido.data!.fornecedor_id}>{pedido.data!.fornecedor_nome} (inativo)</option>}
+                {listaFornecedores.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </Select>
             )}
           </Field>
@@ -96,32 +81,9 @@ export function PedidoFormPage() {
             <h2 className="text-sm font-semibold">Itens</h2>
             <Button type="button" variant="secondary" onClick={() => itens.append(itemVazio())}>Adicionar item</Button>
           </div>
-          {tipoId && sugestoes.data && (
-            <div className="mb-4 rounded border-l-2 border-brand/70 bg-surface-2 px-3 py-2.5" data-testid="sugestoes">
-              {sugeridos.length === 0
-                ? <p className="text-xs text-muted">Ainda não há histórico de pedidos para o tipo <strong className="text-ink">{sugestoes.data.tipo.nome}</strong>.</p>
-                : (
-                  <>
-                    <p className="mb-2 text-xs text-muted">Mais pedidos por clientes do tipo <strong className="text-ink">{sugestoes.data.tipo.nome}</strong> (últimos 90 dias). Clique para adicionar:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sugeridos.map((s) => {
-                        const tem = jaTem(s.produto_id, s.unidade)
-                        return (
-                          <Button key={s.produto_id + s.unidade} type="button" variant="secondary" disabled={tem}
-                            aria-label={`${tem ? 'Já adicionado' : 'Adicionar'}: ${s.produto_nome} em ${s.unidade}`}
-                            onClick={() => adicionar(s.produto_id, s.unidade)}>
-                            {tem ? '✓' : '+'} {s.produto_nome} ({s.unidade})
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-            </div>
-          )}
           {e.itens?.root?.message && <p role="alert" className="mb-2 text-xs text-danger">{e.itens.root.message}</p>}
           {e.itens?.message && <p role="alert" className="mb-2 text-xs text-danger">{e.itens.message}</p>}
-          <div className="flex flex-col divide-y divide-line">
+          <div className="flex flex-col divide-y divide-white/[0.07]">
             {itens.fields.map((campo, n) => {
               const ie = e.itens?.[n]
               const produtoId = f.watch(`itens.${n}.produto_id`)
@@ -142,7 +104,7 @@ export function PedidoFormPage() {
                     )}
                   </Field>
                   <Field label={produtoId ? 'Descrição original' : 'Descrição do item *'} erro={ie?.texto_original?.message}>
-                    {(fid) => <Input id={fid} placeholder={produtoId ? 'opcional' : 'como o cliente pediu'} aria-invalid={!!ie?.texto_original} {...f.register(`itens.${n}.texto_original`)} />}
+                    {(fid) => <Input id={fid} placeholder={produtoId ? 'opcional' : 'como está na sua lista'} aria-invalid={!!ie?.texto_original} {...f.register(`itens.${n}.texto_original`)} />}
                   </Field>
                   <Field label="Quantidade *" erro={ie?.quantidade?.message}>
                     {(fid) => <Input id={fid} inputMode="decimal" className="text-right font-semibold" aria-invalid={!!ie?.quantidade} {...f.register(`itens.${n}.quantidade`)} />}

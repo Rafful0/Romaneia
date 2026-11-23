@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ButtonLink, Badge, Button, Card, Num, PageHeader, Qtd, QueryState, StatusPedidoBadge, Table, Td } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { data, dataHora, qtd } from '../lib/format'
+import { useAuth } from '../hooks/useAuth'
 import { linkWhatsApp } from '../lib/whatsapp'
 import { api } from '../services/api'
 import type { Pedido } from '../types'
@@ -13,6 +14,7 @@ export function PedidoDetalhePage() {
   const { id } = useParams()
   const qc = useQueryClient()
   const toast = useToast()
+  const { usuario } = useAuth()
   const [cancelando, setCancelando] = useState(false)
   const q = useQuery({ queryKey: ['pedido', id], queryFn: () => api.pedidos.obter(id!) })
   const atualizar = (p: Pedido) => {
@@ -33,14 +35,14 @@ export function PedidoDetalhePage() {
     <QueryState q={q}>
       {(p) => {
         const editavel = p.status === 'pendente' || p.status === 'confirmado'
-        const whatsapp = linkWhatsApp(p)
+        const whatsapp = linkWhatsApp(p, usuario?.empresa ?? '')
         return (
           <>
             <PageHeader titulo={`Pedido #${p.numero}`} sub={<span className="flex items-center gap-2"><StatusPedidoBadge s={p.status} /> revisão {p.revisao}</span>}
               acoes={<>
                 {whatsapp
                   ? <ButtonLink to={whatsapp} target="_blank" rel="noopener noreferrer" variant="secondary">Enviar no WhatsApp</ButtonLink>
-                  : <Button variant="secondary" disabled>WhatsApp: cliente sem telefone válido</Button>}
+                  : <Button variant="secondary" disabled>WhatsApp: fornecedor sem número válido</Button>}
                 {editavel && <ButtonLink to={`/pedidos/${p.id}/editar`} variant="secondary">Editar</ButtonLink>}
                 {p.status === 'pendente' && <Button loading={confirmar.isPending} onClick={() => confirmar.mutate()}>Confirmar pedido</Button>}
                 {editavel && <Button variant="danger" onClick={() => setCancelando(true)}>Cancelar pedido</Button>}
@@ -57,7 +59,7 @@ export function PedidoDetalhePage() {
             )}
             <Card className="mb-4 text-sm">
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div><dt className="text-xs text-muted">Cliente</dt><dd className="mt-0.5 font-medium">{p.cliente_nome}</dd></div>
+                <div><dt className="text-xs text-muted">Fornecedor</dt><dd className="mt-0.5 font-medium">{p.fornecedor_nome}</dd></div>
                 <div><dt className="text-xs text-muted">Entrega</dt><dd className="mt-0.5">{data(p.data_entrega)}</dd></div>
                 <div><dt className="text-xs text-muted">Rota</dt><dd className="mt-0.5">{p.rota_id ? <Link className="text-brand hover:underline" to={`/rotas/${p.rota_id}`}>{p.rota_nome} ({data(p.rota_data)})</Link> : 'Sem rota'}</dd></div>
                 <div><dt className="text-xs text-muted">Criado por</dt><dd className="mt-0.5">{p.criado_por_nome} em {dataHora(p.criado_em)}</dd></div>

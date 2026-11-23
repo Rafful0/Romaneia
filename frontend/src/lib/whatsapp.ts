@@ -1,4 +1,4 @@
-import type { Pedido, StatusPedido } from '../types'
+import type { Pedido } from '../types'
 import { data, qtd } from './format'
 
 /** Telefone BR -> só dígitos com DDI 55, ou null se não der para saber o número com segurança. */
@@ -16,29 +16,29 @@ export function formatarTelefone(d: string): string {
   return m ? `+55 (${m[1]}) ${m[2]}-${m[3]}` : d
 }
 
-const SITUACAO: Record<StatusPedido, string> = {
-  pendente: 'foi recebido',
-  confirmado: 'foi confirmado',
-  em_separacao: 'está em separação',
-  separado: 'está separado e pronto para entrega',
-  cancelado: 'foi cancelado',
-}
-
-export function mensagemPedido(p: Pedido): string {
+/** Mensagem do pedido para o fornecedor (quem compra é a empresa logada). */
+export function mensagemPedido(p: Pedido, empresa: string): string {
+  if (p.status === 'cancelado') {
+    return [
+      `Olá, ${p.fornecedor_nome}! O pedido #${p.numero} da ${empresa} foi cancelado.`,
+      ...(p.motivo_cancelamento ? [`Motivo: ${p.motivo_cancelamento}`] : []),
+    ].join('\n')
+  }
   const itens = p.itens.map((i) => `- ${qtd(i.quantidade)} ${i.unidade} ${i.produto_nome ?? i.texto_original ?? ''}`.trimEnd())
   return [
-    `Olá, ${p.cliente_nome}! Seu pedido #${p.numero} ${SITUACAO[p.status]}.`,
-    p.status === 'cancelado' && p.motivo_cancelamento ? `Motivo: ${p.motivo_cancelamento}` : `Entrega: ${data(p.data_entrega)}`,
+    `Olá, ${p.fornecedor_nome}! Segue o pedido #${p.numero} da ${empresa}.`,
+    `Entrega: ${data(p.data_entrega)}`,
     '',
     'Itens:',
     ...itens,
+    ...(p.observacao ? ['', `Observação: ${p.observacao}`] : []),
     '',
-    'Qualquer dúvida, é só responder esta mensagem.',
+    'Pode confirmar o recebimento, por favor?',
   ].join('\n')
 }
 
-/** Link click-to-chat: abre o WhatsApp com a mensagem pronta; quem envia é o funcionário. */
-export function linkWhatsApp(p: Pedido): string | null {
-  const tel = telefoneWhatsApp(p.cliente_telefone)
-  return tel && `https://wa.me/${tel}?text=${encodeURIComponent(mensagemPedido(p))}`
+/** Link click-to-chat: abre o WhatsApp do fornecedor com o pedido pronto; quem envia é o usuário. */
+export function linkWhatsApp(p: Pedido, empresa: string): string | null {
+  const tel = telefoneWhatsApp(p.fornecedor_telefone)
+  return tel && `https://wa.me/${tel}?text=${encodeURIComponent(mensagemPedido(p, empresa))}`
 }

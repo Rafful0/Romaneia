@@ -67,7 +67,7 @@ export function RotaDetalhePage() {
                       {(fid) => (
                         <Select id={fid} value={escolhido} onChange={(e) => setEscolhido(e.target.value)}>
                           <option value="">Selecione…</option>
-                          {d.items.map((p) => <option key={p.id} value={p.id}>#{p.numero} — {p.cliente_nome} ({p.status}, entrega {data(p.data_entrega)})</option>)}
+                          {d.items.map((p) => <option key={p.id} value={p.id}>#{p.numero} — {p.fornecedor_nome} ({p.status}, entrega {data(p.data_entrega)})</option>)}
                         </Select>
                       )}
                     </Field>
@@ -78,11 +78,11 @@ export function RotaDetalhePage() {
             </Card>
 
             {r.pedidos.length === 0 ? <EmptyState titulo="Nenhum pedido nesta rota." /> : (
-              <Table head={['Nº', 'Cliente', 'Entrega', 'Status', 'Itens', '']}>
+              <Table head={['Nº', 'Fornecedor', 'Entrega', 'Status', 'Itens', '']}>
                 {r.pedidos.map((p) => (
                   <tr key={p.id}>
                     <Td><Link to={`/pedidos/${p.id}`} className="font-mono hover:text-brand">#{p.numero}</Link></Td>
-                    <Td>{p.cliente_nome}</Td>
+                    <Td>{p.fornecedor_nome}</Td>
                     <Td>{data(p.data_entrega)}</Td>
                     <Td><StatusPedidoBadge s={p.status} /></Td>
                     <Td>{p.qtd_itens}{p.nao_identificados > 0 && <span className="ml-2"><Badge tom="amarelo">{p.nao_identificados} não ident.</Badge></span>}</Td>

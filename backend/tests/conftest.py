@@ -48,7 +48,7 @@ def owner():
 def limpar(owner):
     yield
     with owner.begin() as c:
-        c.execute(text("truncate cadastros_pendentes, empresas, usuarios, tipos_comercio, fornecedores, clientes, produtos, produto_apelidos, rotas, pedidos, "
+        c.execute(text("truncate cadastros_pendentes, empresas, usuarios, fornecedores, produtos, produto_apelidos, rotas, pedidos, "
                        "pedido_itens, romaneios, romaneio_pedidos, romaneio_itens, romaneio_item_origens, "
                        "auditoria cascade"))
 
@@ -101,8 +101,11 @@ def admin_b(emp_b):
 
 
 # ---- helpers de cenário ----
-def novo_cliente(cli, nome="Cliente X"):
-    r = cli.post("/api/clientes", json={"nome": nome})
+_telefones = iter(range(10_000_000, 99_999_999))  # número único por fornecedor criado nos testes
+
+
+def novo_fornecedor(cli, nome="Fornecedor X"):
+    r = cli.post("/api/fornecedores", json={"nome": nome, "telefone": f"119{next(_telefones):08d}"})
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -113,8 +116,8 @@ def novo_produto(cli, codigo="P1", unidade="cx", nome=None):
     return r.json()
 
 
-def novo_pedido(cli, cliente_id, itens, data="2026-12-01"):
-    return cli.post("/api/pedidos", json={"cliente_id": cliente_id, "data_entrega": data, "itens": itens})
+def novo_pedido(cli, fornecedor_id, itens, data="2026-12-01"):
+    return cli.post("/api/pedidos", json={"fornecedor_id": fornecedor_id, "data_entrega": data, "itens": itens})
 
 
 def nova_rota(cli, nome="Rota 1", data="2026-12-01"):

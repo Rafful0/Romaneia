@@ -4,7 +4,6 @@ import { useAuth } from './hooks/useAuth'
 import { AppLayout } from './layouts/AppLayout'
 import { CadastroGooglePage } from './pages/CadastroGooglePage'
 import { CadastroPage } from './pages/CadastroPage'
-import { ClientesPage } from './pages/ClientesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { FornecedoresPage } from './pages/FornecedoresPage'
 import { HistoricoPage } from './pages/HistoricoPage'
@@ -18,8 +17,6 @@ import { RomaneiosPage } from './pages/RomaneiosPage'
 import { RotaDetalhePage } from './pages/RotaDetalhePage'
 import { RotasPage } from './pages/RotasPage'
 import { SeparacaoPage } from './pages/SeparacaoPage'
-import { TipoComercioLeituraPage } from './pages/TipoComercioLeituraPage'
-import { TiposComercioPage } from './pages/TiposComercioPage'
 
 function Privado() {
   const { usuario, carregando, naoAutenticado, erro, refetch } = useAuth()
@@ -38,9 +35,6 @@ export function App() {
       <Route path="/cadastro/google" element={<CadastroGooglePage />} />
       <Route element={<Privado />}>
         <Route index element={<DashboardPage />} />
-        <Route path="clientes" element={<ClientesPage />} />
-        <Route path="tipos-comercio" element={<TiposComercioPage />} />
-        <Route path="tipos-comercio/:id" element={<TipoComercioLeituraPage />} />
         <Route path="produtos" element={<ProdutosPage />} />
         <Route path="fornecedores" element={<FornecedoresPage />} />
         <Route path="pedidos" element={<PedidosPage />} />
