@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Logo } from '../components/Logo'
 import { Button } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { api } from '../services/api'
@@ -14,6 +15,7 @@ const LINKS = [
   { to: '/clientes', rotulo: 'Clientes', quebra: true },
   { to: '/tipos-comercio', rotulo: 'Tipos de comércio' },
   { to: '/produtos', rotulo: 'Produtos' },
+  { to: '/fornecedores', rotulo: 'Fornecedores' },
   { to: '/historico', rotulo: 'Histórico', admin: true, quebra: true },
 ]
 
@@ -29,9 +31,8 @@ export function AppLayout({ usuario }: { usuario: Usuario }) {
   return (
     <div className="flex h-full">
       <aside className="no-print flex w-56 shrink-0 flex-col border-r border-line bg-surface max-md:w-44">
-        <div className="flex h-14 items-center gap-2.5 border-b border-line px-5">
-          <span aria-hidden className="size-2.5 rounded-[2px] bg-brand" />
-          <span className="text-[0.9375rem] font-semibold tracking-[-0.01em]">Romaneia</span>
+        <div className="flex h-14 items-center border-b border-line px-4">
+          <Logo />
         </div>
         <nav className="flex flex-1 flex-col gap-px px-2 py-3" aria-label="Principal">
           {LINKS.filter((l) => !l.admin || usuario.papel === 'admin').map((l) => (

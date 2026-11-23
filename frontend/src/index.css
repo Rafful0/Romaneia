@@ -21,6 +21,14 @@
   --color-warn: #e3b341;
   --color-info: #6cb6ff;
   --color-done: #b392f0;
+  --color-whatsapp: #25d366;
+
+  /* Flutuação lenta das formas do login; só usada com motion-safe:. */
+  --animate-flutuar: flutuar 9s ease-in-out infinite;
+  @keyframes flutuar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
 }
 
 :root { color-scheme: dark; }

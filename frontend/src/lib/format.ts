@@ -46,10 +46,10 @@ export const hojeISO = () => {
 const ACOES: Record<string, string> = {
   criar: 'criou', editar: 'editou', inativar: 'inativou', confirmar: 'confirmou', cancelar: 'cancelou',
   gerar: 'gerou', invalidar: 'marcou como desatualizado', separar: 'separou item de', desmarcar: 'desmarcou item de',
-  associar: 'incluiu pedido na', remover: 'removeu pedido da', concluir: 'concluiu', login: 'entrou no sistema',
+  associar: 'incluiu pedido na', remover: 'removeu pedido da', concluir: 'concluiu', login: 'entrou no sistema', criar_conta: 'criou a conta',
 }
 const ENTIDADES: Record<string, string> = {
-  cliente: 'cliente', produto: 'produto', pedido: 'pedido', rota: 'rota', romaneio: 'romaneio', tipo_comercio: 'tipo de comércio',
+  cliente: 'cliente', produto: 'produto', pedido: 'pedido', rota: 'rota', romaneio: 'romaneio', tipo_comercio: 'tipo de comércio', fornecedor: 'fornecedor',
   romaneio_item: 'romaneio', usuario: '',
 }
 export function descreverAtividade(acao: string, entidade: string, detalhes: Record<string, unknown>): string {

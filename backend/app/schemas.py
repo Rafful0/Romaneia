@@ -16,8 +16,31 @@ class Base(BaseModel):
 
 
 class LoginIn(Base):
-    email: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
+    login: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]  # e-mail ou celular
     senha: Annotated[str, StringConstraints(min_length=1, max_length=200)]
+
+
+class CadastroIniciarIn(Base):
+    metodo: Literal["email", "telefone"]
+    destino: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
+    nome: Texto
+    empresa: Texto
+    senha: Annotated[str, StringConstraints(min_length=8, max_length=200)]
+
+
+class CadastroConfirmarIn(Base):
+    cadastro_id: UUID
+    codigo: Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^\d{6}$")]
+
+
+class CadastroGoogleIn(Base):
+    empresa: Texto
+
+
+class FornecedorIn(Base):
+    nome: Texto
+    telefone: Annotated[str, StringConstraints(strip_whitespace=True, min_length=8, max_length=30)]
+    observacao: TextoOpc = None
 
 
 class ClienteIn(Base):

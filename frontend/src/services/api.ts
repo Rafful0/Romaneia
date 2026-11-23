@@ -1,11 +1,13 @@
 // Única camada HTTP do app. Nenhum componente chama fetch diretamente.
 import type {
   Atividade, Cliente, ClienteIn, Dashboard, Pagina, Pedido, PedidoIn, PedidoResumo, Produto, ProdutoIn,
-  LeituraTipo, Romaneio, RomaneioResumo, Rota, RotaResumo, TipoComercio, Usuario, UsuarioResumo,
+  CadastroIn, CadastroIniciado, Fornecedor, FornecedorIn, LeituraTipo, Provedores, Romaneio, RomaneioResumo, Rota, RotaResumo, TipoComercio, Usuario, UsuarioResumo,
 } from '../types'
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api'
 export const EVENTO_401 = 'romaneia:nao-autenticado'
+/** Login com Google é navegação de página inteira (redirect para o Google), não fetch. */
+export const URL_GOOGLE = `${BASE}/auth/google/iniciar`
 
 export class ApiError extends Error {
   constructor(public status: number, public codigo: string, message: string, public detalhes?: unknown) {
@@ -50,7 +52,12 @@ const del = <T>(p: string) => req<T>('DELETE', p)
 
 export const api = {
   auth: {
-    login: (email: string, senha: string) => post<Usuario>('/auth/login', { email, senha }),
+    login: (login: string, senha: string) => post<Usuario>('/auth/login', { login, senha }),
+    provedores: () => get<Provedores>('/auth/provedores'),
+    cadastroIniciar: (d: CadastroIn) => post<CadastroIniciado>('/auth/cadastro/iniciar', d),
+    cadastroConfirmar: (cadastro_id: string, codigo: string) => post<Usuario>('/auth/cadastro/confirmar', { cadastro_id, codigo }),
+    cadastroGoogle: () => get<{ nome: string; email: string }>('/auth/cadastro/google'),
+    cadastroGoogleConcluir: (empresa: string) => post<Usuario>('/auth/cadastro/google', { empresa }),
     logout: () => post<void>('/auth/logout'),
     me: () => get<Usuario>('/auth/me'),
   },
@@ -69,6 +76,12 @@ export const api = {
     editar: (id: string, nome: string) => put<TipoComercio>(`/tipos-comercio/${id}`, { nome }),
     inativar: (id: string) => post<TipoComercio>(`/tipos-comercio/${id}/inativar`),
     leitura: (id: string, dias: number) => get<LeituraTipo>(`/tipos-comercio/${id}/leitura`, { dias }),
+  },
+  fornecedores: {
+    listar: (p: Params) => get<Pagina<Fornecedor>>('/fornecedores', p),
+    criar: (d: FornecedorIn) => post<Fornecedor>('/fornecedores', d),
+    editar: (id: string, d: FornecedorIn) => put<Fornecedor>(`/fornecedores/${id}`, d),
+    inativar: (id: string) => post<Fornecedor>(`/fornecedores/${id}/inativar`),
   },
   produtos: {
     listar: (p: Params) => get<Pagina<Produto>>('/produtos', p),

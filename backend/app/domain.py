@@ -1,4 +1,5 @@
 """Regras de domínio puras (sem banco): unidades, quantidades, transições, consolidação."""
+import re
 from collections import defaultdict
 from decimal import Decimal
 
@@ -48,3 +49,27 @@ def consolidar(itens: list[dict]) -> dict[tuple[str, str], dict]:
         linha["total"] += Decimal(it["quantidade"])
         linha["origens"][str(it["pedido_id"])] += Decimal(it["quantidade"])
     return out
+
+
+def normalizar_telefone(tel: str | None) -> str | None:
+    """Celular/fixo BR -> só dígitos com DDI 55, ou None se não der para saber o número com segurança.
+
+    Mesma regra de frontend/src/lib/whatsapp.ts (telefoneWhatsApp).
+    """
+    bruto = (tel or "").strip()
+    d = re.sub(r"\D", "", bruto).lstrip("0")
+    if bruto.startswith("+") and not d.startswith("55"):
+        return None  # DDI estrangeiro
+    if len(d) in (10, 11):
+        return "55" + d
+    if len(d) in (12, 13) and d.startswith("55"):
+        return d
+    return None
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def normalizar_email(email: str | None) -> str | None:
+    e = (email or "").strip().lower()
+    return e if EMAIL_RE.match(e) else None

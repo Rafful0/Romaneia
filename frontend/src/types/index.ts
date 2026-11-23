@@ -80,3 +80,17 @@ export interface Atividade {
 export interface Dashboard {
   pendentes: number; confirmados: number; em_separacao: number; sem_rota: number; atividade_recente: Atividade[]
 }
+
+export interface Provedores { google: boolean; verificacao_simulada: boolean }
+export type MetodoCadastro = 'email' | 'telefone'
+export interface CadastroIn { metodo: MetodoCadastro; destino: string; nome: string; empresa: string; senha: string }
+export interface CadastroIniciado {
+  cadastro_id: string; metodo: MetodoCadastro; destino: string; expira_em: string
+  codigo_dev?: string // só no modo protótipo: o código não é enviado de verdade
+}
+
+export interface Fornecedor {
+  id: string; nome: string; telefone: string; observacao: string | null; ativo: boolean
+  criado_em: string; atualizado_em: string
+}
+export interface FornecedorIn { nome: string; telefone: string; observacao: string | null }

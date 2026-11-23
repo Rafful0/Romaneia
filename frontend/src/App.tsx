@@ -2,8 +2,11 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ErrorState, Spinner } from './components/ui'
 import { useAuth } from './hooks/useAuth'
 import { AppLayout } from './layouts/AppLayout'
+import { CadastroGooglePage } from './pages/CadastroGooglePage'
+import { CadastroPage } from './pages/CadastroPage'
 import { ClientesPage } from './pages/ClientesPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { FornecedoresPage } from './pages/FornecedoresPage'
 import { HistoricoPage } from './pages/HistoricoPage'
 import { LoginPage } from './pages/LoginPage'
 import { PedidoDetalhePage } from './pages/PedidoDetalhePage'
@@ -31,12 +34,15 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<CadastroPage />} />
+      <Route path="/cadastro/google" element={<CadastroGooglePage />} />
       <Route element={<Privado />}>
         <Route index element={<DashboardPage />} />
         <Route path="clientes" element={<ClientesPage />} />
         <Route path="tipos-comercio" element={<TiposComercioPage />} />
         <Route path="tipos-comercio/:id" element={<TipoComercioLeituraPage />} />
         <Route path="produtos" element={<ProdutosPage />} />
+        <Route path="fornecedores" element={<FornecedoresPage />} />
         <Route path="pedidos" element={<PedidosPage />} />
         <Route path="pedidos/novo" element={<PedidoFormPage />} />
         <Route path="pedidos/:id" element={<PedidoDetalhePage />} />

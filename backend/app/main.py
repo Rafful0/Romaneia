@@ -5,7 +5,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.db import engine
 from app.errors import registrar_handlers
-from app.routers import auth, clientes, geral, pedidos, produtos, romaneios, rotas, tipos_comercio
+from app.routers import auth, clientes, fornecedores, geral, pedidos, produtos, romaneios, rotas, tipos_comercio
 
 app = FastAPI(title="Romaneia API", version="0.1.0")
 registrar_handlers(app)
@@ -13,7 +13,7 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.cors_list, allow_crede
                    allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type"])
 
 api = APIRouter(prefix="/api")
-for r in (auth, clientes, tipos_comercio, produtos, pedidos, rotas, romaneios, geral):
+for r in (auth, clientes, tipos_comercio, fornecedores, produtos, pedidos, rotas, romaneios, geral):
     api.include_router(r.router)
 
 

@@ -21,10 +21,10 @@ test('fluxo completo do funcionário, com persistência após recarregar', async
   await expect(page).toHaveURL(/\/login$/)
 
   // 2. Login (erro primeiro, depois sucesso)
-  await page.getByLabel('E-mail').fill('admin@demo.test')
+  await page.getByLabel('E-mail ou celular').fill('admin@demo.test')
   await page.getByLabel('Senha').fill('senha-errada')
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await expect(page.getByRole('alert')).toContainText('E-mail ou senha incorretos')
+  await expect(page.getByRole('alert')).toContainText('E-mail/celular ou senha incorretos')
   await page.getByLabel('Senha').fill(SENHA)
   await page.getByRole('button', { name: 'Entrar' }).click()
   await expect(page).toHaveURL(/\/pedidos$/) // volta para onde tentou ir

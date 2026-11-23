@@ -17,6 +17,7 @@ os.environ["DATABASE_URL"] = ADMIN.set(database=DB, username="romaneia_app", pas
     hide_password=False)
 os.environ["JWT_SECRET"] = "segredo-de-teste-com-mais-de-32-caracteres!"
 os.environ["CORS_ORIGINS"] = "http://localhost:5173"
+os.environ["VERIFICACAO_MODO"] = "dev"
 
 SENHA = "senha-teste-123"
 
@@ -47,7 +48,7 @@ def owner():
 def limpar(owner):
     yield
     with owner.begin() as c:
-        c.execute(text("truncate empresas, usuarios, tipos_comercio, clientes, produtos, produto_apelidos, rotas, pedidos, "
+        c.execute(text("truncate cadastros_pendentes, empresas, usuarios, tipos_comercio, fornecedores, clientes, produtos, produto_apelidos, rotas, pedidos, "
                        "pedido_itens, romaneios, romaneio_pedidos, romaneio_itens, romaneio_item_origens, "
                        "auditoria cascade"))
 
@@ -69,7 +70,7 @@ def logar(email: str):
     from fastapi.testclient import TestClient
     from app.main import app
     cli = TestClient(app)
-    r = cli.post("/api/auth/login", json={"email": email, "senha": SENHA})
+    r = cli.post("/api/auth/login", json={"login": email, "senha": SENHA})
     assert r.status_code == 200, r.text
     return cli
 

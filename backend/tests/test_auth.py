@@ -13,15 +13,15 @@ def test_login_e_me(admin_a):
 
 
 def test_login_cookie_httponly(emp_a):
-    r = TestClient(app).post("/api/auth/login", json={"email": "admin@a.test", "senha": SENHA})
+    r = TestClient(app).post("/api/auth/login", json={"login": "admin@a.test", "senha": SENHA})
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=lax" in cookie
 
 
 def test_senha_errada_e_email_inexistente_mesmo_erro(emp_a):
     cli = TestClient(app)
-    r1 = cli.post("/api/auth/login", json={"email": "admin@a.test", "senha": "errada"})
-    r2 = cli.post("/api/auth/login", json={"email": "ninguem@a.test", "senha": "errada"})
+    r1 = cli.post("/api/auth/login", json={"login": "admin@a.test", "senha": "errada"})
+    r2 = cli.post("/api/auth/login", json={"login": "ninguem@a.test", "senha": "errada"})
     assert r1.status_code == r2.status_code == 401
     assert r1.json() == r2.json()
 

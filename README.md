@@ -40,6 +40,30 @@ Dados **fictícios**, criados por `backend/app/seed.py` na empresa "Distribuidor
 | `admin@demo.test` | admin | valor de `SEED_PASSWORD` (padrão `demo1234`) |
 | `operador@demo.test` | operador | idem |
 
+### Criar conta (cadastro self-service)
+
+Na tela de login, **Criar conta** cria uma **empresa nova** com você como admin, por:
+- **E-mail** ou **celular** + senha (mín. 8 caracteres), confirmados por um código de 6 dígitos válido por 10 minutos
+  (5 tentativas). **No protótipo o código não é enviado de verdade** (`VERIFICACAO_MODO=dev`): ele aparece na própria
+  tela, marcado como simulado, e no log do backend. Envio real por e-mail/SMS ainda não foi implementado.
+- **Google**, quando configurado (abaixo). Na primeira vez, pede só o nome da empresa. Se já existir uma conta de
+  senha com o mesmo e-mail, o Google é **recusado** (não vincula automaticamente): como o código do cadastro não prova
+  posse do e-mail no modo dev, quem cadastrou o e-mail de outra pessoa manteria o acesso pela senha.
+- O modo simulado precisa ser ligado explicitamente (`VERIFICACAO_MODO=dev`, já é o padrão do docker compose). Sem ele,
+  o cadastro por código é recusado em vez de devolver o código.
+
+Depois, o login aceita e-mail **ou** celular (em qualquer formato: `(11) 98765-4321`, `11987654321`, `+55 11 ...`).
+
+### Login com Google (opcional)
+
+1. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), crie um projeto, configure a
+   **tela de consentimento OAuth** (tipo "Externo", modo de teste, com seu e-mail como usuário de teste) e crie uma
+   credencial **ID do cliente OAuth** do tipo **Aplicativo da Web**.
+2. Em **URIs de redirecionamento autorizados**, adicione `http://localhost:8080/api/auth/google/retorno`
+   (troque o host se `APP_URL` for outro).
+3. Coloque `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` e rode `docker compose up -d`.
+   O botão "Entrar com Google" aparece sozinho (o frontend consulta `/api/auth/provedores`).
+
 Troque `SEED_PASSWORD`, `JWT_SECRET`, `POSTGRES_PASSWORD` e `APP_DB_PASSWORD` em qualquer ambiente que não seja a sua máquina.
 
 ### Desenvolvimento sem rebuild
@@ -105,6 +129,8 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 - **WhatsApp (link wa.me)**: no pedido, o botão "Enviar no WhatsApp" abre o WhatsApp do funcionário com a mensagem do
   pedido pronta para o telefone do cliente (DDI 55 adicionado; número inválido desabilita o botão). O envio é manual,
   então o sistema não registra se a mensagem foi de fato enviada.
+- **Fornecedores**: cada empresa cadastra os números de WhatsApp de quem fornece para ela (nome, número, observação).
+  O número é normalizado (DDI 55) e não pode repetir na mesma empresa; a lista abre a conversa no WhatsApp (wa.me).
 - **Separação** com controle otimista por item (`versao`): marcar/desmarcar com versão antiga retorna 409 informando
   quem marcou. Ninguém sobrescreve em silêncio o que outra pessoa fez.
 
@@ -113,7 +139,7 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 - **operador**: cadastros (incluindo tipos de comércio), pedidos, rotas, romaneios e separação.
 
 ### API (prefixo `/api`)
-`auth/login|logout|me`, `clientes`, `tipos-comercio` (+ `/{id}/leitura?dias=`), `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
+`auth/login|logout|me|provedores`, `auth/cadastro/iniciar|confirmar`, `auth/cadastro/google`, `auth/google/iniciar|retorno`, `fornecedores`, `clientes`, `tipos-comercio` (+ `/{id}/leitura?dias=`), `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
 `/romaneios`), `romaneios` (+ `/itens/{id}/separacao`), `dashboard`, `usuarios`, `auditoria`, `health`.
 Listas paginadas: `?page=&page_size=` → `{items, total, page, page_size}`.
 Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa em http://localhost:8000/docs.
@@ -124,15 +150,20 @@ Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa
 (código único, apelidos), pedidos (itens múltiplos, filtros, confirmar, cancelar com justificativa, edição com revisão),
 rotas (incluir/remover, pedidos sem rota), romaneios (geração, visão por produto/cliente/pedidos de origem, versões),
 separação (responsável, horário, %, conflito entre usuários), histórico com filtro por período e usuário, isolamento entre empresas,
-tipos de comércio (cadastro, leitura do que cada tipo pede, sugestão no pedido) e link de WhatsApp do pedido.
+tipos de comércio (cadastro, leitura do que cada tipo pede, sugestão no pedido), link de WhatsApp do pedido,
+criação de conta por e-mail e celular (com código simulado), login por e-mail ou celular e fornecedores.
 
 **Parcial / não verificado:**
+- Login com Google: o fluxo completo (PKCE, state, nonce, conferência do id_token, vínculo e conta nova) tem testes
+  automatizados com o Google **simulado**, mas não foi testado contra o Google de verdade, que exige o Client ID.
+- Código de verificação do cadastro: simulado (aparece na tela e no log); não há envio real de e-mail/SMS.
 - Impressão do romaneio: há CSS de `@media print` (esconde menu e botões, fundo branco), mas a saída impressa não foi conferida.
 - Responsivo: pensado para notebook; em tablet o menu lateral só estreita. Não há layout mobile.
 - O formulário de pedido carrega até 100 clientes/produtos ativos num `<select>` (sem busca incremental).
 
 **Não implementado (fora do escopo deste protótipo):**
-- Gestão de usuários pela interface (usuários só via seed/SQL); reativar cliente/produto inativado.
+- Gestão de usuários pela interface (convidar funcionários para a empresa); recuperação de senha; reativar cliente/produto inativado.
+- Uso dos fornecedores além do cadastro (ex.: mandar a lista de compras pelo WhatsApp).
 - Revogação de token no logout (o JWT vale até expirar se tiver sido copiado), limite de tentativas de login, token CSRF
   (a proteção atual é `SameSite=Lax` + CORS restrito + JSON).
 - Envio automático de WhatsApp (API oficial da Meta), confirmação de entrega/leitura e opt-in do cliente.
