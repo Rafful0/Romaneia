@@ -1,5 +1,6 @@
 import base64
 import smtplib
+import ssl
 from email.message import EmailMessage
 import hashlib
 import hmac
@@ -101,10 +102,12 @@ def _enviar_codigo(metodo: str, destino: str, codigo: str) -> None:
     msg.set_content(f"Seu código para criar a conta no Romaneia é {codigo}.\n\n"
                     "Ele vale por 10 minutos. Se não foi você, ignore este e-mail.")
     try:
-        cls = smtplib.SMTP_SSL if settings.smtp_porta == 465 else smtplib.SMTP
-        with cls(settings.smtp_host, settings.smtp_porta, timeout=15) as smtp:
-            if cls is smtplib.SMTP:
-                smtp.starttls()
+        tls = ssl.create_default_context()  # sem contexto explícito o smtplib não verifica o certificado do servidor
+        conexao = (smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_porta, timeout=15, context=tls)
+                   if settings.smtp_porta == 465 else smtplib.SMTP(settings.smtp_host, settings.smtp_porta, timeout=15))
+        with conexao as smtp:
+            if settings.smtp_porta != 465:
+                smtp.starttls(context=tls)
             if settings.smtp_usuario:
                 smtp.login(settings.smtp_usuario, settings.smtp_senha)
             smtp.send_message(msg)

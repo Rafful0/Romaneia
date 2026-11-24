@@ -227,6 +227,7 @@ def test_concluir_google_sem_cookie_falha():
 @pytest.fixture()
 def smtp(monkeypatch):
     import smtplib
+    import ssl
     enviados, estado = [], {"falhar": False}
 
     class SMTPFalso:
@@ -234,7 +235,8 @@ def smtp(monkeypatch):
             assert (host, porta) == ("smtp.teste", 587)
         def __enter__(self): return self
         def __exit__(self, *a): return False
-        def starttls(self): estado["tls"] = True
+        def starttls(self, context=None):
+            estado["tls"] = context is not None and context.verify_mode == ssl.CERT_REQUIRED and context.check_hostname
         def login(self, u, s): estado["login"] = (u, s)
         def send_message(self, m):
             if estado["falhar"]:
