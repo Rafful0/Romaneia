@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.db import engine, set_tenant
+from app.errors import AppError
 
 log = logging.getLogger("romaneia.whatsapp")
 
@@ -95,15 +96,28 @@ def montar(d: dict) -> tuple[str, dict]:
     return "texto", {**base, "type": "text", "text": {"preview_url": False, "body": "\n".join(linhas)}}
 
 
-def agendar(c, pedido_id, motivo: str) -> str | None:
-    """Grava o envio pendente na transação da requisição (c: Ctx). None se o WhatsApp não está configurado."""
+def agendar(c, pedido_id, motivo: str, manual: bool = False) -> str | None:
+    """Grava o envio pendente na transação da requisição (c: Ctx). None se não há o que enviar agora.
+
+    Envio manual acima do limite é recusado (429). Envio automático acima do limite fica registrado como "falhou",
+    para nunca desfazer a confirmação/cancelamento do pedido.
+    """
     if not configurado():
         return None
+    if manual and c.q("select count(*) from envios_whatsapp where pedido_id = :p and criado_em > now() - interval '24 hours'",
+                      p=pedido_id).scalar() >= settings.whatsapp_limite_reenvio_pedido:
+        raise AppError(429, "limite_reenvio", "Limite de envios deste pedido nas últimas 24 h atingido. Tente amanhã.")
+    no_limite = c.q("select count(*) from envios_whatsapp where criado_em > now() - interval '24 hours'"
+                    ).scalar() >= settings.whatsapp_limite_dia_empresa  # RLS: só os envios desta empresa
+    if no_limite and manual:
+        raise AppError(429, "limite_diario", "Limite diário de mensagens de WhatsApp da empresa atingido.")
     tel = c.q("select fo.telefone from pedidos p join fornecedores fo on fo.id = p.fornecedor_id where p.id = :id",
               id=pedido_id).scalar()
-    return str(c.q("insert into envios_whatsapp (empresa_id, pedido_id, motivo, telefone, criado_por) "
-                   "values (:e, :p, :m, :t, :u) returning id",
-                   e=c.empresa_id, p=pedido_id, m=motivo, t=tel, u=c.usuario_id).scalar())
+    envio = c.q("insert into envios_whatsapp (empresa_id, pedido_id, motivo, telefone, criado_por, status, erro) "
+                "values (:e, :p, :m, :t, :u, :s, :er) returning id",
+                e=c.empresa_id, p=pedido_id, m=motivo, t=tel, u=c.usuario_id, s="falhou" if no_limite else "pendente",
+                er="Limite diário de mensagens de WhatsApp da empresa atingido." if no_limite else None).scalar()
+    return None if no_limite else str(envio)
 
 
 def processar(empresa_id: str, envio_id: str) -> None:

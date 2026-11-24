@@ -14,8 +14,22 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     # "dev": código não é enviado; vai para o log e volta na resposta (só protótipo, precisa ser ligado explicitamente).
-    # Qualquer outro valor: cadastro por código fica recusado até existir envio real (fail-closed).
+    # "real": código por e-mail via SMTP (celular fica indisponível até existir SMS).
+    # Qualquer outro valor: cadastro por código fica recusado (fail-closed).
     verificacao_modo: str = "desativado"
+    smtp_host: str = ""
+    smtp_porta: int = 587  # 587 = STARTTLS, 465 = SSL
+    smtp_usuario: str = ""
+    smtp_senha: str = ""
+    smtp_remetente: str = ""  # vazio = usa smtp_usuario
+
+    @property
+    def cadastro_email(self) -> bool:
+        return self.verificacao_modo == "dev" or (self.verificacao_modo == "real" and bool(self.smtp_host))
+
+    @property
+    def cadastro_celular(self) -> bool:
+        return self.verificacao_modo == "dev"  # shortcut: sem SMS real; ligar um provedor (ex.: Twilio) para o modo "real"
 
     # WhatsApp Cloud API (Meta). Sem token + phone_number_id, o envio automático fica desligado (só o link manual).
     whatsapp_token: str = ""
@@ -28,6 +42,9 @@ class Settings(BaseSettings):
     whatsapp_modelo_idioma: str = "pt_BR"
     whatsapp_verify_token: str = ""  # handshake do webhook
     whatsapp_app_secret: str = ""    # assinatura X-Hub-Signature-256 do webhook
+    # O número é compartilhado entre empresas: limites contra uso abusivo (banimento do número, custo).
+    whatsapp_limite_dia_empresa: int = 200
+    whatsapp_limite_reenvio_pedido: int = 3  # envios manuais por pedido em 24 h
 
     @property
     def google_ativo(self) -> bool:

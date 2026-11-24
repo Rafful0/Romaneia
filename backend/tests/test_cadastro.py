@@ -221,3 +221,59 @@ def test_google_recusa_state_trocado_e_sem_cookie(google):
 def test_concluir_google_sem_cookie_falha():
     r = TestClient(app).post("/api/auth/cadastro/google", json={"empresa": "X"})
     assert r.status_code == 404
+
+
+# ---------- e-mail de verdade (SMTP simulado) ----------
+@pytest.fixture()
+def smtp(monkeypatch):
+    import smtplib
+    enviados, estado = [], {"falhar": False}
+
+    class SMTPFalso:
+        def __init__(self, host, porta, timeout):
+            assert (host, porta) == ("smtp.teste", 587)
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): estado["tls"] = True
+        def login(self, u, s): estado["login"] = (u, s)
+        def send_message(self, m):
+            if estado["falhar"]:
+                raise smtplib.SMTPException("caiu")
+            enviados.append(m)
+
+    monkeypatch.setattr(smtplib, "SMTP", SMTPFalso)
+    for k, v in {"verificacao_modo": "real", "smtp_host": "smtp.teste", "smtp_usuario": "romaneia@teste",
+                 "smtp_senha": "senha-app"}.items():
+        monkeypatch.setattr(settings, k, v)
+    return {"enviados": enviados, "estado": estado}
+
+
+def test_modo_real_envia_codigo_por_email_e_nao_devolve_na_resposta(smtp):
+    cli = TestClient(app)
+    r = iniciar(cli)
+    assert r.status_code == 201 and "codigo_dev" not in r.json()
+    (m,) = smtp["enviados"]
+    assert m["To"] == "dona@padaria.test" and m["From"] == "romaneia@teste"
+    assert smtp["estado"]["tls"] and smtp["estado"]["login"] == ("romaneia@teste", "senha-app")
+    codigo = m["Subject"].split()[0]
+    assert len(codigo) == 6 and codigo in m.get_content()
+    r = cli.post("/api/auth/cadastro/confirmar", json={"cadastro_id": r.json()["cadastro_id"], "codigo": codigo})
+    assert r.status_code == 201
+
+
+def test_modo_real_sem_sms_recusa_celular_antes_de_consultar(smtp, emp_a):
+    assert TestClient(app).get("/api/auth/provedores").json()["cadastro_celular"] is False
+    r = iniciar(TestClient(app), metodo="telefone", destino="(11) 98888-7777")
+    assert r.status_code == 501 and smtp["enviados"] == []
+
+
+def test_falha_no_smtp_vira_erro_claro(smtp):
+    smtp["estado"]["falhar"] = True
+    r = iniciar(TestClient(app))
+    assert r.status_code == 502 and r.json()["erro"]["codigo"] == "envio_falhou"
+
+
+def test_modo_real_sem_smtp_configurado_recusa(monkeypatch):
+    monkeypatch.setattr(settings, "verificacao_modo", "real")
+    assert TestClient(app).get("/api/auth/provedores").json()["cadastro_email"] is False
+    assert iniciar(TestClient(app)).status_code == 501

@@ -72,7 +72,7 @@ export interface Dashboard {
   pendentes: number; confirmados: number; em_separacao: number; sem_rota: number; atividade_recente: Atividade[]
 }
 
-export interface Provedores { google: boolean; verificacao_simulada: boolean }
+export interface Provedores { google: boolean; verificacao_simulada: boolean; cadastro_email: boolean; cadastro_celular: boolean }
 export type MetodoCadastro = 'email' | 'telefone'
 export interface CadastroIn { metodo: MetodoCadastro; destino: string; nome: string; empresa: string; senha: string }
 export interface CadastroIniciado {

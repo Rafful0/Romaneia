@@ -1,4 +1,6 @@
 import base64
+import smtplib
+from email.message import EmailMessage
 import hashlib
 import hmac
 import logging
@@ -79,7 +81,8 @@ def me(c: Ctx = Depends(ctx)):
 
 @router.get("/provedores")
 def provedores():
-    return {"google": settings.google_ativo, "verificacao_simulada": settings.verificacao_modo == "dev"}
+    return {"google": settings.google_ativo, "verificacao_simulada": settings.verificacao_modo == "dev",
+            "cadastro_email": settings.cadastro_email, "cadastro_celular": settings.cadastro_celular}
 
 
 # ---------- cadastro por e-mail ou celular (código de 6 dígitos) ----------
@@ -88,10 +91,26 @@ def _hash_codigo(cadastro_id, codigo: str) -> str:
 
 
 def _enviar_codigo(metodo: str, destino: str, codigo: str) -> None:
-    if settings.verificacao_modo != "dev":
-        raise AppError(501, "envio_nao_configurado", "Envio de código por e-mail/SMS ainda não foi configurado")
-    # shortcut: modo dev não envia nada; o código vai para o log e para a resposta. Trocar por SMTP/SMS em produção.
-    log.warning("[cadastro dev] código %s para %s %s (não enviado)", codigo, metodo, destino)
+    if settings.verificacao_modo == "dev":
+        log.warning("[cadastro dev] código %s para %s %s (não enviado)", codigo, metodo, destino)
+        return
+    msg = EmailMessage()
+    msg["Subject"] = f"{codigo} é o seu código do Romaneia"
+    msg["From"] = settings.smtp_remetente or settings.smtp_usuario
+    msg["To"] = destino
+    msg.set_content(f"Seu código para criar a conta no Romaneia é {codigo}.\n\n"
+                    "Ele vale por 10 minutos. Se não foi você, ignore este e-mail.")
+    try:
+        cls = smtplib.SMTP_SSL if settings.smtp_porta == 465 else smtplib.SMTP
+        with cls(settings.smtp_host, settings.smtp_porta, timeout=15) as smtp:
+            if cls is smtplib.SMTP:
+                smtp.starttls()
+            if settings.smtp_usuario:
+                smtp.login(settings.smtp_usuario, settings.smtp_senha)
+            smtp.send_message(msg)
+    except (smtplib.SMTPException, OSError) as e:
+        log.error("[cadastro] falha ao enviar e-mail: %r", e)
+        raise AppError(502, "envio_falhou", "Não foi possível enviar o e-mail com o código. Tente de novo em instantes.")
 
 
 def _criar_conta(conn: Connection, empresa: str, nome: str, email=None, telefone=None, google_sub=None,
@@ -104,8 +123,10 @@ def _criar_conta(conn: Connection, empresa: str, nome: str, email=None, telefone
 
 @router.post("/cadastro/iniciar", status_code=201)
 def cadastro_iniciar(d: CadastroIniciarIn):
-    if settings.verificacao_modo != "dev":  # antes de tocar no banco: cadastro desligado não revela contas
-        raise AppError(501, "envio_nao_configurado", "Envio de código por e-mail/SMS ainda não foi configurado")
+    # Antes de tocar no banco: método indisponível não revela se a conta existe.
+    if not (settings.cadastro_email if d.metodo == "email" else settings.cadastro_celular):
+        raise AppError(501, "envio_nao_configurado", "Cadastro por " + ("e-mail" if d.metodo == "email" else "celular")
+                       + " não está disponível no momento" + ("" if d.metodo == "email" else "; use e-mail ou Google"))
     destino = normalizar_email(d.destino) if d.metodo == "email" else normalizar_telefone(d.destino)
     if not destino:
         msg = "E-mail inválido" if d.metodo == "email" else "Celular inválido: use DDD + número (ex.: 11 98765-4321)"

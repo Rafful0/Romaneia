@@ -108,13 +108,13 @@ export function CadastroPage() {
     <AuthLayout>
       <form noValidate onSubmit={f.handleSubmit(({ confirmar: _, ...d }) => iniciar.mutate(d))} className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold tracking-[-0.01em]">Criar conta</h1>
-        <fieldset className="flex flex-col gap-1">
+        {provedores.data?.cadastro_celular !== false && <fieldset className="flex flex-col gap-1">
           <legend className="mb-1 text-xs font-medium text-ink-2">Cadastrar com</legend>
           <div className="flex gap-1 rounded-md border border-white/15 bg-black/20 p-1">
             {opcao('email', 'E-mail')}
             {opcao('telefone', 'Celular')}
           </div>
-        </fieldset>
+        </fieldset>}
         <Field label="Seu nome" erro={e.nome?.message}>
           {(id) => <Input id={id} autoComplete="name" aria-invalid={!!e.nome} {...f.register('nome')} />}
         </Field>

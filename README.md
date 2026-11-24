@@ -35,8 +35,9 @@ acesso é pelo **Criar conta** (abaixo). Para apagar tudo e recomeçar do zero: 
 
 Na tela de login, **Criar conta** cria uma **empresa nova** com você como admin, por:
 - **E-mail** ou **celular** + senha (mín. 8 caracteres), confirmados por um código de 6 dígitos válido por 10 minutos
-  (5 tentativas). **No protótipo o código não é enviado de verdade** (`VERIFICACAO_MODO=dev`): ele aparece na própria
-  tela, marcado como simulado, e no log do backend. Envio real por e-mail/SMS ainda não foi implementado.
+  (5 tentativas). Com `VERIFICACAO_MODO=dev` (padrão do compose) **o código não é enviado**: aparece na própria tela,
+  marcado como simulado, e no log do backend. Com `VERIFICACAO_MODO=real` o código vai **por e-mail** (abaixo) e o
+  cadastro por celular some da tela, porque ainda não há envio de SMS.
 - **Google**, quando configurado (abaixo). Na primeira vez, pede só o nome da empresa. Se já existir uma conta de
   senha com o mesmo e-mail, o Google é **recusado** (não vincula automaticamente): como o código do cadastro não prova
   posse do e-mail no modo dev, quem cadastrou o e-mail de outra pessoa manteria o acesso pela senha.
@@ -74,15 +75,37 @@ A Meta cobra por mensagem de modelo (confira a tabela atual para o Brasil); resp
 O status "entregue"/"lido" chega pelo webhook `/api/whatsapp/webhook` (assinatura verificada com `WHATSAPP_APP_SECRET`),
 que precisa de uma URL pública HTTPS; sem ele, o pedido mostra "enviado" (aceito pela Meta).
 
+### Código por e-mail de verdade (opcional)
+
+Qualquer servidor SMTP serve. Para a demonstração, o mais simples é uma conta Gmail com **senha de app**:
+1. Na conta Google que vai enviar, ative a **verificação em duas etapas** (myaccount.google.com → Segurança).
+2. Em [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), crie uma senha de app
+   (nome: "Romaneia"). O Google mostra 16 letras uma única vez.
+3. No `.env`:
+   ```
+   VERIFICACAO_MODO=real
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORTA=587
+   SMTP_USUARIO=seu-email@gmail.com
+   SMTP_SENHA=as 16 letras da senha de app
+   ```
+4. `docker compose up -d`. Crie uma conta por e-mail: o código chega na caixa de entrada (confira o spam na primeira vez).
+
+O Gmail limita a cerca de 500 envios por dia; para produção use um serviço de e-mail transacional (ex.: Brevo, Resend,
+Amazon SES) com o mesmo SMTP. Se o envio falhar, a tela mostra "Não foi possível enviar o e-mail" e o motivo vai para o log.
+
 ### Login com Google (opcional)
 
 1. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), crie um projeto, configure a
-   **tela de consentimento OAuth** (tipo "Externo", modo de teste, com seu e-mail como usuário de teste) e crie uma
+   **tela de consentimento OAuth** (Google Auth Platform → Branding/Público: tipo "Externo", em **teste**, e adicione
+   em **Usuários de teste** cada e-mail que vai entrar; quem não estiver na lista recebe "acesso bloqueado") e crie uma
    credencial **ID do cliente OAuth** do tipo **Aplicativo da Web**.
 2. Em **URIs de redirecionamento autorizados**, adicione `http://localhost:8080/api/auth/google/retorno`
    (troque o host se `APP_URL` for outro).
 3. Coloque `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` e rode `docker compose up -d`.
    O botão "Entrar com Google" aparece sozinho (o frontend consulta `/api/auth/provedores`).
+4. Para qualquer pessoa entrar (não só os usuários de teste), publique o app na tela de consentimento; com os escopos
+   usados (nome, e-mail) não é preciso passar pela verificação do Google.
 
 Troque `JWT_SECRET`, `POSTGRES_PASSWORD` e `APP_DB_PASSWORD` em qualquer ambiente que não seja a sua máquina.
 
@@ -176,7 +199,8 @@ com filtro por período e usuário, isolamento entre empresas.
   processo: um envio "Enviando…" interrompido por queda do servidor precisa de "Reenviar".
 - Login com Google: o fluxo completo (PKCE, state, nonce, conferência do id_token, vínculo e conta nova) tem testes
   automatizados com o Google **simulado**, mas não foi testado contra o Google de verdade, que exige o Client ID.
-- Código de verificação do cadastro: simulado (aparece na tela e no log); não há envio real de e-mail/SMS.
+- Código de verificação: envio por e-mail testado com SMTP **simulado** (não contra o Gmail de verdade); não há SMS,
+  então no modo real o cadastro por celular fica indisponível.
 - Impressão do romaneio: há CSS de `@media print` (esconde menu e botões, fundo branco), mas a saída impressa não foi conferida.
 - Responsivo: pensado para notebook; em tablet o menu lateral só estreita. Não há layout mobile.
 - O formulário de pedido carrega até 100 fornecedores/produtos ativos num `<select>` (sem busca incremental).

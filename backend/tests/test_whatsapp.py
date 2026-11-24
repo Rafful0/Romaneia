@@ -186,3 +186,22 @@ def test_enviar_api_monta_requisicao_e_le_erro_da_meta(monkeypatch):
     with pytest.raises(wa.ErroWhatsApp) as e:
         wa.enviar_api({"to": "erro"})
     assert e.value.codigo == 131030
+
+
+def test_limite_de_reenvio_por_pedido(meta, pedido, monkeypatch):
+    monkeypatch.setattr(settings, "whatsapp_limite_reenvio_pedido", 2)
+    identificar_e_confirmar(pedido)  # 1º envio (automático)
+    assert pedido["cli"].post(f"/api/pedidos/{pedido['id']}/whatsapp").status_code == 202  # 2º
+    r = pedido["cli"].post(f"/api/pedidos/{pedido['id']}/whatsapp")
+    assert r.status_code == 429 and r.json()["erro"]["codigo"] == "limite_reenvio"
+    assert len(meta["enviados"]) == 2
+
+
+def test_limite_diario_da_empresa_nao_desfaz_confirmacao(meta, pedido, monkeypatch):
+    monkeypatch.setattr(settings, "whatsapp_limite_dia_empresa", 0)
+    r = identificar_e_confirmar(pedido)
+    assert r.status_code == 200 and r.json()["status"] == "confirmado"
+    (env,) = r.json()["envios_whatsapp"]
+    assert env["status"] == "falhou" and "Limite diário" in env["erro"]
+    assert meta["enviados"] == []
+    assert pedido["cli"].post(f"/api/pedidos/{pedido['id']}/whatsapp").status_code == 429

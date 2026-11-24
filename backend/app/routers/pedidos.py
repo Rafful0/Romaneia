@@ -158,8 +158,8 @@ def cancelar(pid: UUID, d: CancelarIn, tarefas: BackgroundTasks, c: Ctx = Depend
     return detalhe(c, pid)
 
 
-def _enviar_depois(c: Ctx, tarefas: BackgroundTasks, pid, motivo: str) -> None:
-    envio = whatsapp.agendar(c, pid, motivo)
+def _enviar_depois(c: Ctx, tarefas: BackgroundTasks, pid, motivo: str, manual: bool = False) -> None:
+    envio = whatsapp.agendar(c, pid, motivo, manual)
     if envio:  # roda depois do commit da requisição, fora da transação
         tarefas.add_task(whatsapp.processar, c.empresa_id, envio)
 
@@ -174,5 +174,5 @@ def enviar_whatsapp(pid: UUID, tarefas: BackgroundTasks, c: Ctx = Depends(ctx)):
         raise AppError(409, "pedido_pendente", "Confirme o pedido antes de enviar ao fornecedor")
     if c.um("select 1 from envios_whatsapp where pedido_id = :p and status in ('pendente','enviando')", p=pid):
         raise AppError(409, "envio_em_andamento", "Já há um envio em andamento para este pedido")
-    _enviar_depois(c, tarefas, pid, "cancelamento" if p["status"] == "cancelado" else "pedido")
+    _enviar_depois(c, tarefas, pid, "cancelamento" if p["status"] == "cancelado" else "pedido", manual=True)
     return detalhe(c, pid)
