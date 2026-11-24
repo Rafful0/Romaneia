@@ -32,7 +32,7 @@ export function DashboardPage() {
               : (
                 <Card className="divide-y divide-white/[0.07] p-0!">
                   {d.atividade_recente.map((a) => (
-                    <div key={a.id} className="flex items-baseline gap-4 px-4 py-2 text-sm">
+                    <div key={a.id} className="flex items-baseline gap-4 px-4 py-2 text-sm max-sm:flex-col max-sm:gap-0.5">
                       <span className="w-32 shrink-0 text-xs text-muted">{dataHora(a.criado_em)}</span>
                       <span><span className="font-medium">{a.usuario_nome ?? 'Sistema'}</span>{' '}
                         <span className="text-ink-2">{descreverAtividade(a.acao, a.entidade, a.detalhes)}</span></span>

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { Button } from '../components/ui'
 import { useToast } from '../hooks/useToast'
@@ -44,10 +45,23 @@ export function AppLayout({ usuario }: { usuario: Usuario }) {
     onSuccess: () => { qc.clear(); qc.setQueryData(['me'], null); nav('/login') },
     onError: toast.erro,
   })
+  // Celular: o menu vira gaveta aberta pelo botão "Menu"; fecha ao navegar, no Esc ou tocando fora.
+  const [menu, setMenu] = useState(false)
+  const loc = useLocation()
+  useEffect(() => setMenu(false), [loc.pathname])
+  useEffect(() => {
+    if (!menu) return
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [menu])
   return (
     <div className="app-fundo relative flex h-full overflow-hidden bg-linear-to-br from-[#0f2c1d] via-bg to-[#0a2116]">
       <FundoInterno />
-      <aside className="no-print relative z-10 flex w-56 shrink-0 flex-col border-r border-white/10 bg-white/[0.04] backdrop-blur-xl max-md:w-44">
+      {menu && <div aria-hidden className="no-print fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setMenu(false)} />}
+      <aside id="menu-principal" className={'no-print z-30 flex w-56 shrink-0 flex-col border-r border-white/10 bg-white/[0.04] backdrop-blur-xl ' +
+        'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-64 max-md:bg-[#111c17] max-md:transition-transform md:relative md:z-10 ' +
+        (menu ? '' : 'max-md:invisible max-md:-translate-x-full')}>
         <div className="flex h-14 items-center border-b border-white/10 px-4">
           <Logo />
         </div>
@@ -68,10 +82,16 @@ export function AppLayout({ usuario }: { usuario: Usuario }) {
           <Button variant="secondary" className="w-full" loading={sair.isPending} onClick={() => sair.mutate()}>Sair</Button>
         </div>
       </aside>
-      {/* Conteúdo alinhado à barra lateral (não centralizado): tabelas largas usam a tela toda. */}
-      <main className="relative z-10 flex-1 overflow-y-auto px-8 py-6 max-md:px-4 max-md:py-4">
-        <div className="max-w-[88rem]"><Outlet /></div>
-      </main>
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+        <header className="no-print flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-white/[0.04] px-4 backdrop-blur-xl md:hidden">
+          <Logo />
+          <Button variant="secondary" aria-expanded={menu} aria-controls="menu-principal" onClick={() => setMenu(true)}>Menu</Button>
+        </header>
+        {/* Conteúdo alinhado à barra lateral (não centralizado): tabelas largas usam a tela toda. */}
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 py-6 max-md:px-4 max-md:py-4">
+          <div className="max-w-[88rem]"><Outlet /></div>
+        </main>
+      </div>
     </div>
   )
 }

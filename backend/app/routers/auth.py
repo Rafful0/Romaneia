@@ -110,7 +110,7 @@ def _enviar_codigo(metodo: str, destino: str, codigo: str) -> None:
                 smtp.starttls(context=tls)
             if settings.smtp_usuario:
                 smtp.login(settings.smtp_usuario, settings.smtp_senha)
-            smtp.send_message(msg)
+            smtp.send_message(msg, to_addrs=[destino])  # destinatário explícito, não lido do cabeçalho
     except (smtplib.SMTPException, OSError) as e:
         log.error("[cadastro] falha ao enviar e-mail: %r", e)
         raise AppError(502, "envio_falhou", "Não foi possível enviar o e-mail com o código. Tente de novo em instantes.")

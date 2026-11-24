@@ -238,7 +238,8 @@ def smtp(monkeypatch):
         def starttls(self, context=None):
             estado["tls"] = context is not None and context.verify_mode == ssl.CERT_REQUIRED and context.check_hostname
         def login(self, u, s): estado["login"] = (u, s)
-        def send_message(self, m):
+        def send_message(self, m, to_addrs=None):
+            estado["to_addrs"] = to_addrs
             if estado["falhar"]:
                 raise smtplib.SMTPException("caiu")
             enviados.append(m)
@@ -256,6 +257,7 @@ def test_modo_real_envia_codigo_por_email_e_nao_devolve_na_resposta(smtp):
     assert r.status_code == 201 and "codigo_dev" not in r.json()
     (m,) = smtp["enviados"]
     assert m["To"] == "dona@padaria.test" and m["From"] == "romaneia@teste"
+    assert smtp["estado"]["to_addrs"] == ["dona@padaria.test"]
     assert smtp["estado"]["tls"] and smtp["estado"]["login"] == ("romaneia@teste", "senha-app")
     codigo = m["Subject"].split()[0]
     assert len(codigo) == 6 and codigo in m.get_content()
@@ -279,3 +281,9 @@ def test_modo_real_sem_smtp_configurado_recusa(monkeypatch):
     monkeypatch.setattr(settings, "verificacao_modo", "real")
     assert TestClient(app).get("/api/auth/provedores").json()["cadastro_email"] is False
     assert iniciar(TestClient(app)).status_code == 501
+
+
+@pytest.mark.parametrize("email", ["a,vitima@x.com", "a<vitima@x.com>", '"a"@x.com', "a b@x.com", "a@x", "a@@x.com"])
+def test_email_com_caracteres_perigosos_e_recusado(email):
+    r = iniciar(TestClient(app), destino=email)
+    assert r.status_code == 422 and r.json()["erro"]["codigo"] == "destino_invalido"

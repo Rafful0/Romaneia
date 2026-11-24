@@ -67,7 +67,8 @@ def normalizar_telefone(tel: str | None) -> str | None:
     return None
 
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Conjunto seguro de caracteres: sem vírgula, aspas ou <>, que o parser de e-mail leria como outro destinatário.
+EMAIL_RE = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
 
 
 def normalizar_email(email: str | None) -> str | None:

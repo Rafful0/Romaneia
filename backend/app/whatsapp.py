@@ -107,6 +107,7 @@ def agendar(c, pedido_id, motivo: str, manual: bool = False) -> str | None:
     if manual and c.q("select count(*) from envios_whatsapp where pedido_id = :p and criado_em > now() - interval '24 hours'",
                       p=pedido_id).scalar() >= settings.whatsapp_limite_reenvio_pedido:
         raise AppError(429, "limite_reenvio", "Limite de envios deste pedido nas últimas 24 h atingido. Tente amanhã.")
+    c.q("select pg_advisory_xact_lock(hashtext(:e))", e=c.empresa_id)  # serializa contagem + insert por empresa
     no_limite = c.q("select count(*) from envios_whatsapp where criado_em > now() - interval '24 hours'"
                     ).scalar() >= settings.whatsapp_limite_dia_empresa  # RLS: só os envios desta empresa
     if no_limite and manual:
