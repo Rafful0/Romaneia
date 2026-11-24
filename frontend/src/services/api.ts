@@ -62,6 +62,7 @@ export const api = {
     me: () => get<Usuario>('/auth/me'),
   },
   dashboard: () => get<Dashboard>('/dashboard'),
+  whatsappStatus: () => get<{ automatico: boolean; modelo: boolean }>('/whatsapp/status'),
   usuarios: () => get<UsuarioResumo[]>('/usuarios'),
   auditoria: (p: Params) => get<Pagina<Atividade>>('/auditoria', p),
   fornecedores: {
@@ -83,6 +84,7 @@ export const api = {
     editar: (id: string, d: PedidoIn) => put<Pedido>(`/pedidos/${id}`, d),
     confirmar: (id: string) => post<Pedido>(`/pedidos/${id}/confirmar`),
     cancelar: (id: string, motivo: string) => post<Pedido>(`/pedidos/${id}/cancelar`, { motivo }),
+    enviarWhatsapp: (id: string) => post<Pedido>(`/pedidos/${id}/whatsapp`),
   },
   rotas: {
     listar: (p: Params) => get<Pagina<RotaResumo>>('/rotas', p),

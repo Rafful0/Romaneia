@@ -24,7 +24,12 @@ export interface PedidoResumo {
   observacao: string | null; motivo_cancelamento: string | null; revisao: number; criado_em: string
   atualizado_em: string; criado_por_nome: string; qtd_itens: number; nao_identificados: number
 }
-export interface Pedido extends PedidoResumo { itens: ItemPedido[] }
+export type StatusEnvio = 'pendente' | 'enviando' | 'enviado' | 'entregue' | 'lido' | 'falhou'
+export interface EnvioWhatsApp {
+  id: string; motivo: 'pedido' | 'cancelamento'; status: StatusEnvio; tipo_mensagem: 'texto' | 'modelo' | null
+  telefone: string; erro: string | null; criado_em: string; atualizado_em: string
+}
+export interface Pedido extends PedidoResumo { itens: ItemPedido[]; envios_whatsapp: EnvioWhatsApp[] }
 export interface ItemIn { produto_id: string | null; texto_original: string | null; quantidade: string; unidade: Unidade }
 export interface PedidoIn { fornecedor_id: string; data_entrega: string; observacao: string | null; itens: ItemIn[] }
 

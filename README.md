@@ -45,6 +45,35 @@ Na tela de login, **Criar conta** cria uma **empresa nova** com você como admin
 
 Depois, o login aceita e-mail **ou** celular (em qualquer formato: `(11) 98765-4321`, `11987654321`, `+55 11 ...`).
 
+### Envio automático pelo WhatsApp (opcional)
+
+Com a WhatsApp Cloud API (oficial, da Meta) configurada, **confirmar um pedido envia a mensagem ao fornecedor
+sozinho**, e o pedido mostra a situação do envio (enviando, enviado, entregue, lido, falhou) com o motivo da falha e
+o botão **Reenviar**. Cancelar um pedido que o fornecedor já recebeu manda o aviso de cancelamento. Falha no WhatsApp
+nunca desfaz a confirmação. Sem configuração, continua só o botão manual (link `wa.me`).
+
+**Demonstração com o número de teste da Meta (grátis, sem usar seu número pessoal como remetente):**
+1. Em [developers.facebook.com](https://developers.facebook.com/apps), crie um app do tipo **Empresa** e adicione o
+   produto **WhatsApp**. Em **WhatsApp → Configuração da API** a Meta já entrega um **número de teste**.
+2. Nessa tela, copie o **token de acesso temporário** (vale 24 h) e o **ID do número de telefone**
+   (`Phone number ID`) para `WHATSAPP_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID` no `.env`.
+3. Em **Para**, adicione o seu celular como destinatário de teste (até 5 números; a Meta manda um código para confirmar).
+4. No Romaneia, cadastre um fornecedor com esse mesmo celular.
+5. Do seu celular, **mande um "oi" para o número de teste** da Meta. Isso abre a janela de 24 h em que mensagens de texto
+   livre são permitidas (sem modelo aprovado).
+6. `docker compose up -d` e confirme um pedido para esse fornecedor: a mensagem chega no seu WhatsApp.
+
+**Para uso real (número do Romaneia):** registre o número do Romaneia na mesma conta (ele deixa de funcionar no app
+comum do WhatsApp), gere um token permanente (usuário do sistema), verifique a empresa na Meta e crie modelos na
+categoria **Utilidade** para mensagens fora da janela de 24 h, por exemplo:
+- `WHATSAPP_MODELO` (5 variáveis): *Olá {{1}}! Segue o pedido #{{2}} da {{3}} para entrega em {{4}}. Itens: {{5}}.
+  Pode confirmar o recebimento, por favor?*
+- `WHATSAPP_MODELO_CANCELAMENTO` (4 variáveis): *Olá {{1}}, o pedido #{{2}} da {{3}} foi cancelado. Motivo: {{4}}.*
+
+A Meta cobra por mensagem de modelo (confira a tabela atual para o Brasil); respostas dentro da janela de 24 h são grátis.
+O status "entregue"/"lido" chega pelo webhook `/api/whatsapp/webhook` (assinatura verificada com `WHATSAPP_APP_SECRET`),
+que precisa de uma URL pública HTTPS; sem ele, o pedido mostra "enviado" (aceito pela Meta).
+
 ### Login com Google (opcional)
 
 1. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), crie um projeto, configure a
@@ -127,7 +156,7 @@ O E2E cria dados com nomes únicos (`E2E ... <timestamp>`) a cada execução.
 - **operador**: cadastros, pedidos, rotas, romaneios e separação.
 
 ### API (prefixo `/api`)
-`auth/login|logout|me|provedores`, `auth/cadastro/iniciar|confirmar`, `auth/cadastro/google`, `auth/google/iniciar|retorno`, `fornecedores`, `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`), `rotas` (+ `/pedidos`,
+`auth/login|logout|me|provedores`, `auth/cadastro/iniciar|confirmar`, `auth/cadastro/google`, `auth/google/iniciar|retorno`, `fornecedores`, `produtos`, `pedidos` (+ `/confirmar`, `/cancelar`, `/whatsapp`), `whatsapp/status|webhook`, `rotas` (+ `/pedidos`,
 `/romaneios`), `romaneios` (+ `/itens/{id}/separacao`), `dashboard`, `usuarios`, `auditoria`, `health`.
 Listas paginadas: `?page=&page_size=` → `{items, total, page, page_size}`.
 Erros: `{"erro": {"codigo", "mensagem", "detalhes"}}`. Documentação interativa em http://localhost:8000/docs.
@@ -142,6 +171,9 @@ produto/fornecedor/pedidos de origem, versões), separação (responsável, hor�
 com filtro por período e usuário, isolamento entre empresas.
 
 **Parcial / não verificado:**
+- Envio automático pelo WhatsApp: testado com a API da Meta **simulada** (texto, modelo, falhas, reenvio, cancelamento,
+  webhook assinado); não foi testado contra a Meta de verdade, que exige o token. A fila de envio roda no próprio
+  processo: um envio "Enviando…" interrompido por queda do servidor precisa de "Reenviar".
 - Login com Google: o fluxo completo (PKCE, state, nonce, conferência do id_token, vínculo e conta nova) tem testes
   automatizados com o Google **simulado**, mas não foi testado contra o Google de verdade, que exige o Client ID.
 - Código de verificação do cadastro: simulado (aparece na tela e no log); não há envio real de e-mail/SMS.
@@ -153,5 +185,4 @@ com filtro por período e usuário, isolamento entre empresas.
 - Gestão de usuários pela interface (convidar funcionários para a empresa); recuperação de senha; reativar fornecedor/produto inativado.
 - Revogação de token no logout (o JWT vale até expirar se tiver sido copiado), limite de tentativas de login, token CSRF
   (a proteção atual é `SameSite=Lax` + CORS restrito + JSON).
-- Envio automático de WhatsApp (API oficial da Meta), confirmação de entrega/leitura.
 - IA, otimização de rotas, LGPD completa, estimativa de custos, deploy em produção.

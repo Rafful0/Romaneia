@@ -6,7 +6,7 @@ const pedido = (extra: Partial<Pedido> = {}): Pedido => ({
   id: 'p', numero: 42, fornecedor_id: 'f', fornecedor_nome: 'Moinho Central', fornecedor_telefone: '(11) 98765-4321',
   rota_id: null, rota_nome: null, rota_data: null, data_entrega: '2026-12-01', status: 'confirmado',
   observacao: null, motivo_cancelamento: null, revisao: 1, criado_em: '', atualizado_em: '', criado_por_nome: 'Ana',
-  qtd_itens: 2, nao_identificados: 0,
+  qtd_itens: 2, nao_identificados: 0, envios_whatsapp: [],
   itens: [
     { id: '1', posicao: 0, produto_id: 'x', produto_codigo: 'ARR', produto_nome: 'Arroz 5kg', texto_original: null, quantidade: '10.000', unidade: 'cx' },
     { id: '2', posicao: 1, produto_id: 'y', produto_codigo: 'TOM', produto_nome: 'Tomate', texto_original: null, quantidade: '2.500', unidade: 'kg' },

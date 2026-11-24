@@ -1,9 +1,9 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 
-from app import domain
+from app import domain, whatsapp
 from app.deps import Ctx, Pagina, ctx
 from app.errors import AppError, nao_encontrado
 from app.routers.romaneios import invalidar
@@ -29,7 +29,9 @@ def detalhe(c: Ctx, pid) -> dict:
                               i.texto_original, i.quantidade::text quantidade, i.unidade
                        from pedido_itens i left join produtos pr on pr.id = i.produto_id
                        where i.pedido_id = :id order by i.posicao""", id=pid)
-    return {**dict(p), "itens": itens}
+    envios = c.todos("""select id, motivo, status, tipo_mensagem, telefone, erro, criado_em, atualizado_em
+                        from envios_whatsapp where pedido_id = :id order by criado_em desc""", id=pid)
+    return {**dict(p), "itens": itens, "envios_whatsapp": envios}
 
 
 def _gravar_itens(c: Ctx, pid, d: PedidoIn, produtos_anteriores: set = frozenset()) -> None:
@@ -122,7 +124,7 @@ def editar(pid: UUID, d: PedidoIn, c: Ctx = Depends(ctx)):
 
 
 @router.post("/{pid}/confirmar")
-def confirmar(pid: UUID, c: Ctx = Depends(ctx)):
+def confirmar(pid: UUID, tarefas: BackgroundTasks, c: Ctx = Depends(ctx)):
     p = _travar(c, pid)
     domain.validar_transicao(p["status"], "confirmado")
     r = c.um("select count(*) total, count(*) filter (where produto_id is null) sem_produto "
@@ -136,11 +138,12 @@ def confirmar(pid: UUID, c: Ctx = Depends(ctx)):
     if p["rota_id"]:
         invalidar(c, f"Pedido #{p['numero']} confirmado na rota", rota_id=p["rota_id"])
     c.auditar("confirmar", "pedido", pid, {"numero": p["numero"]})
+    _enviar_depois(c, tarefas, pid, "pedido")
     return detalhe(c, pid)
 
 
 @router.post("/{pid}/cancelar")
-def cancelar(pid: UUID, d: CancelarIn, c: Ctx = Depends(ctx)):
+def cancelar(pid: UUID, d: CancelarIn, tarefas: BackgroundTasks, c: Ctx = Depends(ctx)):
     p = _travar(c, pid)
     domain.validar_transicao(p["status"], "cancelado")
     if p["status"] == "confirmado":
@@ -148,4 +151,28 @@ def cancelar(pid: UUID, d: CancelarIn, c: Ctx = Depends(ctx)):
     c.q("update pedidos set status = 'cancelado', motivo_cancelamento = :m, atualizado_em = now() where id = :id",
         id=pid, m=d.motivo)
     c.auditar("cancelar", "pedido", pid, {"numero": p["numero"], "motivo": d.motivo})
+    # Só avisa o fornecedor do cancelamento se ele chegou a receber o pedido.
+    if c.um("select 1 from envios_whatsapp where pedido_id = :p and motivo = 'pedido' "
+            "and status in ('enviado','entregue','lido')", p=pid):
+        _enviar_depois(c, tarefas, pid, "cancelamento")
+    return detalhe(c, pid)
+
+
+def _enviar_depois(c: Ctx, tarefas: BackgroundTasks, pid, motivo: str) -> None:
+    envio = whatsapp.agendar(c, pid, motivo)
+    if envio:  # roda depois do commit da requisição, fora da transação
+        tarefas.add_task(whatsapp.processar, c.empresa_id, envio)
+
+
+@router.post("/{pid}/whatsapp", status_code=202)
+def enviar_whatsapp(pid: UUID, tarefas: BackgroundTasks, c: Ctx = Depends(ctx)):
+    """Envia (ou reenvia) o pedido ao fornecedor pela API; pedido cancelado manda o aviso de cancelamento."""
+    if not whatsapp.configurado():
+        raise AppError(409, "whatsapp_nao_configurado", "Envio automático pelo WhatsApp não está configurado")
+    p = _travar(c, pid)
+    if p["status"] == "pendente":
+        raise AppError(409, "pedido_pendente", "Confirme o pedido antes de enviar ao fornecedor")
+    if c.um("select 1 from envios_whatsapp where pedido_id = :p and status in ('pendente','enviando')", p=pid):
+        raise AppError(409, "envio_em_andamento", "Já há um envio em andamento para este pedido")
+    _enviar_depois(c, tarefas, pid, "cancelamento" if p["status"] == "cancelado" else "pedido")
     return detalhe(c, pid)

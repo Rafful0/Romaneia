@@ -17,6 +17,18 @@ class Settings(BaseSettings):
     # Qualquer outro valor: cadastro por código fica recusado até existir envio real (fail-closed).
     verificacao_modo: str = "desativado"
 
+    # WhatsApp Cloud API (Meta). Sem token + phone_number_id, o envio automático fica desligado (só o link manual).
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_api_url: str = "https://graph.facebook.com"
+    whatsapp_api_versao: str = "v23.0"
+    # Modelos aprovados na Meta. Sem modelo, envia texto livre (só funciona na janela de 24 h após o fornecedor escrever).
+    whatsapp_modelo: str = ""
+    whatsapp_modelo_cancelamento: str = ""
+    whatsapp_modelo_idioma: str = "pt_BR"
+    whatsapp_verify_token: str = ""  # handshake do webhook
+    whatsapp_app_secret: str = ""    # assinatura X-Hub-Signature-256 do webhook
+
     @property
     def google_ativo(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)

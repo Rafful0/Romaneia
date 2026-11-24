@@ -38,6 +38,27 @@ body { @apply bg-bg text-ink font-sans antialiased; font-variant-numeric: tabula
 :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
 ::placeholder { color: var(--color-muted); opacity: 1; }
 
+/* Lista dos <select> no tema do app. Continua sendo o <select> nativo (teclado, leitor de tela, celular);
+   navegadores sem "base-select" mostram a lista nativa, só com as cores escuras abaixo. */
+option { background-color: #13201a; color: var(--color-ink); }
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: flex; align-items: center; gap: 0.5rem; }
+  select::picker-icon { margin-left: auto; color: var(--color-muted); transition: rotate 0.15s; }
+  select:open::picker-icon { rotate: 180deg; }
+  ::picker(select) {
+    margin-block: 4px; padding: 4px; max-height: 18rem;
+    border: 1px solid rgb(255 255 255 / 0.15); border-radius: 0.75rem;
+    background: rgb(19 32 26 / 0.96); color: var(--color-ink);
+    box-shadow: 0 20px 40px rgb(0 0 0 / 0.5); backdrop-filter: blur(16px);
+    scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+  }
+  option { padding: 0.375rem 0.625rem; border-radius: 0.5rem; background: transparent; }
+  option:hover, option:focus-visible { background: rgb(255 255 255 / 0.08); outline: none; }
+  option:checked { background: rgb(76 196 127 / 0.14); color: var(--color-brand); }
+  option::checkmark { color: var(--color-brand); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { transition-duration: 0s !important; scroll-behavior: auto !important; }
   .animate-spin { animation-duration: 2.4s; }
