@@ -1,0 +1,27 @@
+# Produção (VM): docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Só o Caddy fica exposto (80/443, HTTPS automático com Let's Encrypt); banco e backend não saem da rede interna.
+services:
+  db:
+    ports: !reset []
+    restart: unless-stopped
+  backend:
+    ports: !reset []
+    restart: unless-stopped
+  frontend:
+    ports: !reset []
+    restart: unless-stopped
+  caddy:
+    image: caddy:2.8.4
+    environment:
+      DOMINIO: "${DOMINIO:?defina DOMINIO no .env, por exemplo romaneia.seudominio.com.br}"
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

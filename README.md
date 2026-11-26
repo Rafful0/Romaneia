@@ -119,6 +119,37 @@ cd frontend && npm install && npm run dev        # http://localhost:5173 (proxy 
 Backend local (fora do Docker): `cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt`,
 copie `backend/.env.example` para `backend/.env`, rode `alembic upgrade head` e `uvicorn app.main:app --reload`.
 
+## Produção numa VM (ex.: Azure)
+
+Uma VM Linux com Docker roda o mesmo compose, com `docker-compose.prod.yml` por cima: só o **Caddy** fica exposto
+(80/443, **HTTPS automático** via Let's Encrypt); PostgreSQL e backend ficam só na rede interna.
+
+1. **VM:** Ubuntu Server 24.04 LTS x64, ~2 GB de RAM ou mais. Em rede, libere só as portas **22, 80 e 443** e marque o
+   **IP público como estático**. Para economizar, ative o desligamento automático e desligue (desaloque) quando não usar.
+2. **Domínio:** crie um registro DNS `A` apontando para o IP da VM (ou use o nome DNS que o Azure dá ao IP público).
+3. **Na VM** (via SSH):
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER   # saia e entre de novo no SSH
+   git clone https://github.com/Rafful0/Romaneia.git && cd Romaneia
+   cp .env.example .env && nano .env
+   ```
+4. **`.env` de produção** — troque **todos** os segredos de desenvolvimento:
+   - `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `JWT_SECRET` novos e longos (ex.: `openssl rand -hex 32`);
+   - `DOMINIO=romaneia.seudominio.com.br`, `APP_URL=https://romaneia.seudominio.com.br`,
+     `CORS_ORIGINS=https://romaneia.seudominio.com.br`, `COOKIE_SECURE=true`;
+   - `VERIFICACAO_MODO=real` + SMTP (sem isso, o cadastro mostra o código na tela);
+   - opcionais: Google (adicione `https://<domínio>/api/auth/google/retorno` no Google Cloud) e WhatsApp.
+5. **Subir:**
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   ```
+   As migrações rodam sozinhas; o banco começa vazio. Em ~1 min o Caddy obtém o certificado e o app abre em
+   `https://<domínio>`.
+6. **Atualizar depois:** `git pull` e o mesmo comando do passo 5.
+7. **Backup** (o banco vive no volume `pgdata` da VM): por exemplo, um cron diário com
+   `docker compose exec -T db pg_dump -U romaneia romaneia | gzip > ~/backup-$(date +%F).sql.gz`, copiando os arquivos
+   para fora da VM.
+
 ## Como testar
 
 ```bash

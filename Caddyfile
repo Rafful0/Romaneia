@@ -1,0 +1,5 @@
+# HTTPS automático: o Caddy tira e renova o certificado do domínio (precisa do DNS apontando para a VM e das portas 80/443 abertas).
+{$DOMINIO} {
+	encode gzip
+	reverse_proxy frontend:80
+}
